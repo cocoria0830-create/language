@@ -51,7 +51,7 @@ body{background:var(--bg);font-family:'Nunito',sans-serif;color:var(--text);}
 .star:nth-child(2){animation-delay:.3s;}.star:nth-child(3){animation-delay:.6s;}
 @keyframes twinkle{from{opacity:.4;transform:scale(.8);}to{opacity:1;transform:scale(1.1);}}
 
-.pill-btn{display:block;width:100%;max-width:300px;margin:0 auto;padding:13px;color:white;border:none;border-radius:50px;font-family:'Fredoka One',cursive;font-size:17px;cursor:pointer;transition:all .2s cubic-bezier(.34,1.56,.64,1);}
+.pill-btn{display:block;width:100%;max-width:300px;margin:0 auto;padding:13px;color:white;border:none;border-radius:50px;font-family:'Nunito',sans-serif;font-size:16px;font-weight:800;cursor:pointer;transition:all .2s cubic-bezier(.34,1.56,.64,1);}
 .pill-btn:hover{transform:scale(1.04);}
 .pill-btn:disabled{background:#D1C4E9!important;box-shadow:none!important;transform:none!important;cursor:not-allowed;}
 .pill-pink{background:linear-gradient(135deg,var(--pink),var(--purple));box-shadow:0 6px 20px rgba(168,85,247,.35);}
@@ -244,7 +244,7 @@ body{background:var(--bg);font-family:'Nunito',sans-serif;color:var(--text);}
 .ex-chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;}
 .ex-chip{padding:3px 9px;background:#FAF5FF;border:1.5px solid #EDE9FE;border-radius:20px;font-size:10px;font-weight:700;color:var(--purple);cursor:pointer;}
 .ex-chip:hover{background:#EDE9FE;}
-.go-btn{display:block;width:100%;padding:11px;color:white;border:none;border-radius:50px;font-family:'Fredoka One',cursive;font-size:15px;cursor:pointer;transition:all .2s cubic-bezier(.34,1.56,.64,1);margin-bottom:.7rem;}
+.go-btn{display:block;width:100%;padding:11px;color:white;border:none;border-radius:50px;font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;cursor:pointer;transition:all .2s cubic-bezier(.34,1.56,.64,1);margin-bottom:.7rem;}
 .go-btn:hover{transform:scale(1.03);}
 .go-btn:disabled{background:#D1C4E9!important;box-shadow:none!important;transform:none!important;cursor:not-allowed;}
 .result-card{background:white;border-radius:18px;padding:1rem;box-shadow:0 4px 14px rgba(168,85,247,.1);margin-bottom:.8rem;animation:fadeIn .4s ease;}
@@ -352,7 +352,7 @@ body{background:var(--bg);font-family:'Nunito',sans-serif;color:var(--text);}
 .input-row{display:flex;gap:6px;}
 .chat-input{flex:1;padding:8px 11px;border:2px solid #EDE9FE;border-radius:11px;font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;color:var(--text);outline:none;resize:none;}
 .chat-input:focus{border-color:var(--purple);}
-.send-btn{padding:8px 13px;background:linear-gradient(135deg,var(--pink),var(--purple));color:white;border:none;border-radius:11px;font-family:'Fredoka One',cursive;font-size:13px;cursor:pointer;flex-shrink:0;}
+.send-btn{padding:8px 13px;background:linear-gradient(135deg,var(--pink),var(--purple));color:white;border:none;border-radius:11px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;cursor:pointer;flex-shrink:0;}
 .send-btn:disabled{background:#D1C4E9;cursor:not-allowed;}
 .inline-fb{background:#FAF5FF;border-radius:9px;padding:5px 9px;margin-top:4px;font-size:10px;font-weight:700;color:var(--purple);display:none;}
 .inline-fb.show{display:block;}
@@ -398,12 +398,12 @@ body{background:var(--bg);font-family:'Nunito',sans-serif;color:var(--text);}
       <div class="star-row"><span class="star">⭐</span><span class="star">🌟</span><span class="star">⭐</span></div>
       <div class="app-sub">100일 다국어 기적 ✨</div>
       <div class="lang-grid">
-        <div class="lang-card eng" data-lang="eng" onclick="selLang(this)"><span class="flag">🇺🇸</span><div class="lang-name">영어</div><div class="lang-eng">English</div></div>
-        <div class="lang-card jpn" data-lang="jpn" onclick="selLang(this)"><span class="flag">🇯🇵</span><div class="lang-name">일본어</div><div class="lang-eng">日本語</div></div>
-        <div class="lang-card chn" data-lang="chn" onclick="selLang(this)"><span class="flag">🇨🇳</span><div class="lang-name">중국어</div><div class="lang-eng">中文</div></div>
-        <div class="lang-card spa" data-lang="spa" onclick="selLang(this)"><span class="flag">🇪🇸</span><div class="lang-name">스페인어</div><div class="lang-eng">Español</div></div>
-        <div class="lang-card tha" data-lang="tha" onclick="selLang(this)"><span class="flag">🇹🇭</span><div class="lang-name">태국어</div><div class="lang-eng">ภาษาไทย</div></div>
-        <div class="lang-card ita" data-lang="ita" onclick="selLang(this)"><span class="flag">🇮🇹</span><div class="lang-name">이탈리아어</div><div class="lang-eng">Italiano</div></div>
+        <div class="lang-card eng" data-lang="eng" onclick="learnSelLang(this)"><span class="flag">🇺🇸</span><div class="lang-name">영어</div><div class="lang-eng">English</div></div>
+        <div class="lang-card jpn" data-lang="jpn" onclick="learnSelLang(this)"><span class="flag">🇯🇵</span><div class="lang-name">일본어</div><div class="lang-eng">日本語</div></div>
+        <div class="lang-card chn" data-lang="chn" onclick="learnSelLang(this)"><span class="flag">🇨🇳</span><div class="lang-name">중국어</div><div class="lang-eng">中文</div></div>
+        <div class="lang-card spa" data-lang="spa" onclick="learnSelLang(this)"><span class="flag">🇪🇸</span><div class="lang-name">스페인어</div><div class="lang-eng">Español</div></div>
+        <div class="lang-card tha" data-lang="tha" onclick="learnSelLang(this)"><span class="flag">🇹🇭</span><div class="lang-name">태국어</div><div class="lang-eng">ภาษาไทย</div></div>
+        <div class="lang-card ita" data-lang="ita" onclick="learnSelLang(this)"><span class="flag">🇮🇹</span><div class="lang-name">이탈리아어</div><div class="lang-eng">Italiano</div></div>
       </div>
       <button class="pill-btn pill-pink" id="lang-start-btn" disabled onclick="goIntro()" style="margin-bottom:.5rem;">레벨 테스트 시작하기 →</button>
       <div style="text-align:center;font-size:12px;color:var(--muted);font-weight:600;">👆 배우고 싶은 언어를 선택하세요</div>
@@ -799,7 +799,7 @@ let cardLevel=1,fcCards=[],fcIdx=0,fcFlipped=false;
 let fcResults={},fcCollection={};
 let fcSpeechRate=0.75;
 
-function selLang(el){
+function learnSelLang(el){
   document.querySelectorAll('.lang-card').forEach(c=>c.classList.remove('selected'));
   el.classList.add('selected');
   selLangKey=el.dataset.lang;
