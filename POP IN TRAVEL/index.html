@@ -164,7 +164,8 @@ body{background:var(--bg);font-family:'Nunito',sans-serif;color:var(--text);}
 .sc-num{font-family:'Fredoka One',cursive;font-size:20px;color:var(--purple);}
 .sc-lbl{font-size:10px;font-weight:800;color:var(--muted);}
 .level-cards-preview{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px;}
-.lcp-card{background:white;border:2px solid #EDE9FE;border-radius:12px;padding:8px 4px;text-align:center;}
+.lcp-card{background:white;border:2px solid #EDE9FE;border-radius:12px;padding:8px 4px;text-align:center;cursor:pointer;transition:all .2s ease;}
+.lcp-card:hover{border-color:var(--purple);transform:scale(1.03);}
 .lcp-card.active{border-color:var(--purple);background:#FAF5FF;}
 .lcp-emoji{font-size:18px;display:block;margin-bottom:2px;}
 .lcp-name{font-size:10px;font-weight:800;color:var(--text);}
@@ -366,6 +367,30 @@ body{background:var(--bg);font-family:'Nunito',sans-serif;color:var(--text);}
 .review-item{background:#FAF5FF;border-radius:9px;padding:6px 9px;margin-bottom:4px;font-size:11px;font-weight:700;color:var(--text);line-height:1.5;text-align:left;}
 .ri-orig{color:#EF4444;text-decoration:line-through;font-size:10px;}
 .ri-fixed{color:#10B981;font-weight:800;}
+
+/* ── 문자 학습 화면 ── */
+.script-learn-wrap{padding-bottom:1rem;}
+.script-section{background:white;border-radius:16px;padding:.9rem;margin-bottom:.8rem;box-shadow:0 4px 12px rgba(168,85,247,.09);}
+.script-section-title{font-family:'Fredoka One',cursive;font-size:14px;color:var(--purple);margin-bottom:.6rem;display:flex;align-items:center;gap:6px;}
+.script-table{width:100%;border-collapse:collapse;font-size:13px;}
+.script-table th{background:#FAF5FF;color:var(--purple);font-weight:800;font-size:11px;padding:5px 4px;text-align:center;border:1px solid #EDE9FE;}
+.script-table td{padding:6px 4px;text-align:center;border:1px solid #EDE9FE;cursor:pointer;transition:background .15s;}
+.script-table td:hover{background:#F0E8FF;}
+.script-char{font-size:18px;font-weight:800;color:var(--text);display:block;}
+.script-read{font-size:10px;color:var(--muted);font-weight:700;}
+.tone-card{border-radius:12px;padding:8px 10px;margin-bottom:6px;display:flex;align-items:center;gap:10px;}
+.tone-num{font-family:'Fredoka One',cursive;font-size:20px;width:32px;flex-shrink:0;text-align:center;}
+.tone-mark{font-size:24px;font-weight:800;flex-shrink:0;width:36px;text-align:center;}
+.tone-desc{font-size:11px;font-weight:700;color:var(--text);line-height:1.5;}
+.tone-ex{font-size:12px;font-weight:800;}
+.rule-item{background:#FAF5FF;border-radius:10px;padding:7px 10px;margin-bottom:5px;display:flex;align-items:flex-start;gap:8px;}
+.rule-char{font-size:16px;font-weight:800;color:var(--purple);min-width:40px;flex-shrink:0;}
+.rule-desc{font-size:11px;font-weight:700;color:var(--text);line-height:1.5;}
+.play-char-btn{background:none;border:none;font-size:14px;cursor:pointer;padding:0;opacity:.7;}
+.play-char-btn:hover{opacity:1;}
+.script-nav{display:flex;gap:5px;margin-bottom:.7rem;flex-wrap:wrap;}
+.snav-btn{padding:4px 11px;background:white;border:2px solid #EDE9FE;border-radius:20px;font-size:11px;font-weight:800;cursor:pointer;color:var(--text);}
+.snav-btn.active{background:var(--purple);border-color:var(--purple);color:white;}
 </style>
 </head>
 <body>
@@ -412,13 +437,10 @@ body{background:var(--bg);font-family:'Nunito',sans-serif;color:var(--text);}
     <!-- STEP: 문자 소개 -->
     <div id="s-intro" class="hidden">
       <div class="app-title">✈️ Pop-in Travel</div>
-      <div class="app-sub" id="intro-sub"></div>
-      <div class="intro-card">
-        <div class="intro-title" id="intro-title"></div>
-        <div class="script-showcase"><div class="script-big" id="intro-chars"></div><div class="script-read" id="intro-read"></div></div>
-        <div class="intro-desc" id="intro-desc"></div>
-      </div>
-      <button class="pill-btn pill-mint" onclick="goTest()" style="margin-bottom:.5rem;">알겠어요! 테스트 시작 →</button>
+      <div class="app-sub" id="intro-sub">📖 문자 & 발음 기초</div>
+      <div class="script-nav" id="script-nav"></div>
+      <div id="script-learn-content" class="script-learn-wrap"></div>
+      <button class="pill-btn pill-mint" onclick="goTest()" style="margin-bottom:.5rem;">다 봤어요! 레벨 테스트 시작 →</button>
       <button class="back-btn" style="display:block;text-align:center;width:100%;" onclick="showStep('s-lang')">← 언어 다시 선택</button>
     </div>
 
@@ -454,7 +476,8 @@ body{background:var(--bg);font-family:'Nunito',sans-serif;color:var(--text);}
         </div>
         <div style="font-family:'Fredoka One',cursive;font-size:12px;color:var(--muted);margin-bottom:6px;">📦 이 레벨의 학습 카드</div>
         <div class="level-cards-preview" id="level-cards-preview"></div>
-        <button class="pill-btn pill-sun" onclick="goFlashcard()">내 레벨 카드 학습 시작 🚀</button>
+        <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px;text-align:center;">👆 원하는 레벨을 탭해서 선택하세요!</div>
+        <button class="pill-btn pill-sun" onclick="goFlashcard()" id="fc-start-btn">선택한 레벨로 학습 시작 🚀</button>
       </div>
     </div>
 
@@ -1281,14 +1304,441 @@ function pickLanguage(el){
 function goIntro(){
   if(!selLangKey)return;
   langCfg=LANG_CFG[selLangKey];
-  const i=langCfg.intro;
-  document.getElementById('intro-sub').innerText=langCfg.flag+' '+langCfg.name+' · 문자 소개';
-  document.getElementById('intro-title').innerText=i.title;
-  document.getElementById('intro-chars').innerText=i.chars;
-  document.getElementById('intro-read').innerText=i.read;
-  document.getElementById('intro-desc').innerText=i.desc;
+  // 영어는 바로 테스트로
+  if(selLangKey==='eng'){goTest();return;}
+  document.getElementById('intro-sub').innerText=langCfg.flag+' '+langCfg.name+' · 문자 & 발음 기초';
+  buildScriptLearn(selLangKey);
   showStep('s-intro');
 }
+
+// ── 문자 학습 데이터 ──
+const SCRIPT_DATA = {
+  jpn:{
+    sections:[
+      {id:'hira',label:'히라가나',content:buildHiragana},
+      {id:'kata',label:'가타카나',content:buildKatakana},
+      {id:'tips',label:'발음 팁',content:buildJpnTips},
+    ]
+  },
+  chn:{
+    sections:[
+      {id:'tone',label:'4가지 성조',content:buildChnTones},
+      {id:'pinyin',label:'병음 읽기',content:buildChnPinyin},
+      {id:'tips',label:'발음 팁',content:buildChnTips},
+    ]
+  },
+  spa:{
+    sections:[
+      {id:'rules',label:'발음 규칙',content:buildSpaRules},
+      {id:'special',label:'특수 문자',content:buildSpaSpecial},
+    ]
+  },
+  tha:{
+    sections:[
+      {id:'consonants',label:'자음',content:buildThaConsonants},
+      {id:'tones',label:'5가지 성조',content:buildThaTones},
+      {id:'tips',label:'발음 팁',content:buildThaTips},
+    ]
+  },
+  ita:{
+    sections:[
+      {id:'rules',label:'발음 규칙',content:buildItaRules},
+      {id:'vowels',label:'모음 & 강세',content:buildItaVowels},
+    ]
+  },
+};
+
+function buildScriptLearn(lang){
+  const data=SCRIPT_DATA[lang];
+  if(!data){return;}
+  const nav=document.getElementById('script-nav');
+  const content=document.getElementById('script-learn-content');
+  nav.innerHTML='';
+  // 첫 섹션 표시
+  let currentSection=0;
+  function showSection(idx){
+    currentSection=idx;
+    nav.querySelectorAll('.snav-btn').forEach((b,i)=>b.classList.toggle('active',i===idx));
+    content.innerHTML='';
+    data.sections[idx].content(content);
+  }
+  data.sections.forEach((s,i)=>{
+    const btn=document.createElement('button');
+    btn.className='snav-btn'+(i===0?' active':'');
+    btn.innerText=s.label;
+    btn.onclick=()=>showSection(i);
+    nav.appendChild(btn);
+  });
+  showSection(0);
+}
+
+// ─ 일본어: 히라가나 ─
+function buildHiragana(wrap){
+  const rows=[
+    ['あ','い','う','え','お','a','i','u','e','o'],
+    ['か','き','く','け','こ','ka','ki','ku','ke','ko'],
+    ['さ','し','す','せ','そ','sa','shi','su','se','so'],
+    ['た','ち','つ','て','と','ta','chi','tsu','te','to'],
+    ['な','に','ぬ','ね','の','na','ni','nu','ne','no'],
+    ['は','ひ','ふ','へ','ほ','ha','hi','fu','he','ho'],
+    ['ま','み','む','め','も','ma','mi','mu','me','mo'],
+    ['や','','ゆ','','よ','ya','','yu','','yo'],
+    ['ら','り','る','れ','ろ','ra','ri','ru','re','ro'],
+    ['わ','','を','','ん','wa','','wo','','n'],
+  ];
+  const sec=document.createElement('div');sec.className='script-section';
+  sec.innerHTML='<div class="script-section-title">🌸 히라가나 50음도</div><div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:6px;">탭하면 발음이 나와요! 행=자음, 열=모음(아이우에오)</div>';
+  const hdr='<tr><th>-</th><th>아(a)</th><th>이(i)</th><th>우(u)</th><th>에(e)</th><th>오(o)</th></tr>';
+  const rowLabels=['あ행','か행','さ행','た행','な행','は행','ま행','や행','ら행','わ행'];
+  let tableHtml='<table class="script-table"><thead>'+hdr+'</thead><tbody>';
+  rows.forEach((row,ri)=>{
+    tableHtml+='<tr><th>'+rowLabels[ri]+'</th>';
+    for(let i=0;i<5;i++){
+      const ch=row[i]; const rd=row[i+5];
+      if(ch) tableHtml+='<td data-ch="'+ch+'" data-lang="ja-JP" class="speak-td"><span class="script-char">'+ch+'</span><span class="script-read">'+rd+'</span></td>';
+      else tableHtml+='<td style="background:#fafafa;"></td>';
+    }
+    tableHtml+='</tr>';
+  });
+  tableHtml+='</tbody></table>';
+  const tbl=document.createElement('div');tbl.innerHTML=tableHtml;
+  tbl.querySelectorAll('.speak-td').forEach(td=>{
+    td.addEventListener('click',function(){speakChar(this.dataset.ch,this.dataset.lang);});
+  });
+  sec.appendChild(tbl);
+  // 탁음 설명
+  const tip=document.createElement('div');
+  tip.style.cssText='background:#FEF3C7;border-radius:10px;padding:8px 10px;margin-top:8px;font-size:11px;font-weight:700;color:var(--text);';
+  tip.innerHTML='💡 <strong>탁음(゛)</strong>: か→が, さ→ざ, た→だ, は→ば | <strong>반탁음(゜)</strong>: は→ぱ<br>💡 <strong>촉음(っ)</strong>: 받침 역할. きって(kitte) 처럼 뒤 자음을 강하게!';
+  sec.appendChild(tip);
+  wrap.appendChild(sec);
+}
+
+// ─ 일본어: 가타카나 ─
+function buildKatakana(wrap){
+  const rows=[
+    ['ア','イ','ウ','エ','オ','a','i','u','e','o'],
+    ['カ','キ','ク','ケ','コ','ka','ki','ku','ke','ko'],
+    ['サ','シ','ス','セ','ソ','sa','shi','su','se','so'],
+    ['タ','チ','ツ','テ','ト','ta','chi','tsu','te','to'],
+    ['ナ','ニ','ヌ','ネ','ノ','na','ni','nu','ne','no'],
+    ['ハ','ヒ','フ','ヘ','ホ','ha','hi','fu','he','ho'],
+    ['マ','ミ','ム','メ','モ','ma','mi','mu','me','mo'],
+    ['ヤ','','ユ','','ヨ','ya','','yu','','yo'],
+    ['ラ','リ','ル','レ','ロ','ra','ri','ru','re','ro'],
+    ['ワ','','ヲ','','ン','wa','','wo','','n'],
+  ];
+  const sec=document.createElement('div');sec.className='script-section';
+  sec.innerHTML='<div class="script-section-title">🎌 가타카나 50음도</div><div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:6px;">외래어·영어 표기에 써요. コーヒー(코히=커피), テレビ(테레비=TV)</div>';
+  const hdr='<tr><th>-</th><th>아(a)</th><th>이(i)</th><th>우(u)</th><th>에(e)</th><th>오(o)</th></tr>';
+  const rowLabels=['ア행','カ행','サ행','タ행','ナ행','ハ행','マ행','ヤ행','ラ행','ワ행'];
+  let tableHtml='<table class="script-table"><thead>'+hdr+'</thead><tbody>';
+  rows.forEach((row,ri)=>{
+    tableHtml+='<tr><th>'+rowLabels[ri]+'</th>';
+    for(let i=0;i<5;i++){
+      const ch=row[i]; const rd=row[i+5];
+      if(ch) tableHtml+='<td data-ch="'+ch+'" data-lang="ja-JP" class="speak-td"><span class="script-char">'+ch+'</span><span class="script-read">'+rd+'</span></td>';
+      else tableHtml+='<td style="background:#fafafa;"></td>';
+    }
+    tableHtml+='</tr>';
+  });
+  tableHtml+='</tbody></table>';
+  const tbl=document.createElement('div');tbl.innerHTML=tableHtml;
+  tbl.querySelectorAll('.speak-td').forEach(td=>{
+    td.addEventListener('click',function(){speakChar(this.dataset.ch,this.dataset.lang);});
+  });
+  sec.appendChild(tbl);
+  const tip=document.createElement('div');
+  tip.style.cssText='background:#FEF3C7;border-radius:10px;padding:8px 10px;margin-top:8px;font-size:11px;font-weight:700;color:var(--text);';
+  tip.innerHTML='💡 <strong>장음 ー</strong>: コーヒー처럼 앞 모음을 길게 늘여요!<br>💡 히라가나와 모양이 다를 뿐 소리는 완전히 같아요!';
+  sec.appendChild(tip);
+  wrap.appendChild(sec);
+}
+
+// ─ 일본어: 발음 팁 ─
+function buildJpnTips(wrap){
+  const tips=[
+    {char:'し (shi)',desc:'영어 si가 아니라 "시"! s+i 아닌 sh+i예요. 혀를 살짝 올려요.'},
+    {char:'つ (tsu)',desc:'"츠"! t+u가 아니에요. 한국어 "쓰"와 비슷하지만 더 날카로워요.'},
+    {char:'ふ (fu)',desc:'f+u가 아니라 입술을 살짝 붙여서 "후". 영어 f보다 부드러워요.'},
+    {char:'ん (n)',desc:'뒤에 오는 글자에 따라 달라요. ん+바행=m음, ん+나행=n음, 단독=ng음'},
+    {char:'長音 ー',desc:'おかあさん(okaasan)처럼 모음을 2배로 길게! 짧게 하면 뜻이 달라져요.'},
+    {char:'促音 っ',desc:'きって(kitte)의 っ는 다음 자음을 강하게 시작하는 신호예요!'},
+  ];
+  const sec=document.createElement('div');sec.className='script-section';
+  sec.innerHTML='<div class="script-section-title">💡 헷갈리는 발음 팁</div>';
+  tips.forEach(t=>{
+    const div=document.createElement('div');div.className='rule-item';
+    div.innerHTML='<div class="rule-char">'+t.char+'</div><div class="rule-desc">'+t.desc+'</div>';
+    sec.appendChild(div);
+  });
+  wrap.appendChild(sec);
+}
+
+// ─ 중국어: 4성조 ─
+function buildChnTones(wrap){
+  const tones=[
+    {num:'1성',mark:'ā',color:'#3B82F6',bg:'#EFF6FF',shape:'─',desc:'높고 평탄하게 유지! "도"음을 길게 끌어요.',ex:'妈(māi) 엄마'},
+    {num:'2성',mark:'á',color:'#10B981',bg:'#ECFDF5',shape:'↗',desc:'낮은 데서 높게 올라가요! 의문문 끝처럼.',ex:'麻(má) 삼'},
+    {num:'3성',mark:'ǎ',color:'#F59E0B',bg:'#FFFBEB',shape:'↘↗',desc:'낮게 내려갔다가 올라와요. 가장 어려운 성조!',ex:'马(mǎ) 말'},
+    {num:'4성',mark:'à',color:'#EF4444',bg:'#FEF2F2',shape:'↘',desc:'높은 데서 확 내려가요! 단호하고 짧게.',ex:'骂(mà) 욕하다'},
+    {num:'경성',mark:'a',color:'#8B5CF6',bg:'#F5F3FF',shape:'·',desc:'성조 없이 가볍고 짧게. 의미보다 문법 역할.',ex:'吗(ma) 의문문 어미'},
+  ];
+  const sec=document.createElement('div');sec.className='script-section';
+  sec.innerHTML='<div class="script-section-title">🎵 4가지 성조 (같은 발음도 성조에 따라 전혀 다른 뜻!)</div>';
+  tones.forEach(t=>{
+    const div=document.createElement('div');div.className='tone-card';
+    div.style.cssText='background:'+t.bg+';border-radius:10px;padding:8px 10px;margin-bottom:5px;display:flex;align-items:center;gap:10px;cursor:pointer;';
+    div.innerHTML='<div style="font-family:Fredoka One,cursive;font-size:16px;color:'+t.color+';min-width:32px;">'+t.num+'</div>'
+      +'<div style="font-size:28px;font-weight:800;color:'+t.color+';min-width:36px;text-align:center;">'+t.mark+'</div>'
+      +'<div style="font-size:18px;color:'+t.color+';min-width:24px;">'+t.shape+'</div>'
+      +'<div><div style="font-size:11px;font-weight:700;color:#1f2937;line-height:1.4;">'+t.desc+'</div>'
+      +'<div style="font-size:12px;font-weight:800;color:'+t.color+';margin-top:2px;">예: '+t.ex+'</div></div>';
+    div.onclick=()=>speakChar(t.ex.split('(')[0],  'zh-CN');
+    sec.appendChild(div);
+  });
+  const tip=document.createElement('div');
+  tip.style.cssText='background:#FEF3C7;border-radius:10px;padding:8px 10px;margin-top:4px;font-size:11px;font-weight:700;color:var(--text);';
+  tip.innerHTML='💡 탭하면 발음을 들을 수 있어요! 3성+3성이 만나면 앞 3성이 2성으로 변해요 (你好=니하오 → 2성+3성)';
+  sec.appendChild(tip);
+  wrap.appendChild(sec);
+}
+
+// ─ 중국어: 병음 읽기 ─
+function buildChnPinyin(wrap){
+  const rules=[
+    {char:'zh/ch/sh/r',desc:'"즈/츠/스/르" — 혀를 말아 올리는 권설음! 한국어에 없는 소리예요.'},
+    {char:'z/c/s',desc:'"즈/츠/스" — zh/ch/sh와 달리 혀를 말지 않아요. 평음이에요.'},
+    {char:'x',desc:'"시" — 영어 x(엑스)가 아니에요! 혀를 앞쪽에 대고 "시"처럼.'},
+    {char:'q',desc:'"치" — 영어 q(큐)가 아니에요! 혀를 앞쪽에 대고 "치"처럼.'},
+    {char:'ü (위)',desc:'"위" — 입술을 동그랗게 모으고 "이"를 발음해요. 한국어 "위"와 비슷!'},
+    {char:'e',desc:'"으어" — 영어 e가 아니에요. 입을 반쯤 벌리고 "으"에서 "어"로!'},
+    {char:'ian',desc:'"이엔" — ian은 "이안"이 아니라 "이엔"으로 읽어요!'},
+    {char:'ui',desc:'"웨이" — ui는 "우이"가 아니라 "웨이"로 읽어요!'},
+  ];
+  const sec=document.createElement('div');sec.className='script-section';
+  sec.innerHTML='<div class="script-section-title">🔤 헷갈리는 병음 읽기</div>';
+  rules.forEach(r=>{
+    const div=document.createElement('div');div.className='rule-item';
+    div.innerHTML='<div class="rule-char" style="font-size:13px;min-width:60px;">'+r.char+'</div><div class="rule-desc">'+r.desc+'</div>';
+    sec.appendChild(div);
+  });
+  wrap.appendChild(sec);
+}
+
+// ─ 중국어: 발음 팁 ─
+function buildChnTips(wrap){
+  const sec=document.createElement('div');sec.className='script-section';
+  sec.innerHTML='<div class="script-section-title">💡 중국어 발음 핵심 팁</div>';
+  const tips=[
+    {char:'성조 변화',desc:'不(bù)는 4성이지만 4성 앞에서 2성(bú)으로 변해요! 不对(bú duì)'},
+    {char:'一(yī)',desc:'숫자 1은 원래 1성. 4성 앞에서 2성, 1·2·3성 앞에서 4성으로 변해요!'},
+    {char:'얼화(儿)',desc:'北京 방언의 특징. 단어 끝에 r을 붙여요. 一点儿(yìdiǎnr) 조금'},
+    {char:'경성',desc:'가볍고 짧게! 助词(어조사)는 대부분 경성이에요. 吗(ma), 的(de), 了(le)'},
+  ];
+  tips.forEach(t=>{
+    const div=document.createElement('div');div.className='rule-item';
+    div.innerHTML='<div class="rule-char" style="font-size:12px;min-width:55px;">'+t.char+'</div><div class="rule-desc">'+t.desc+'</div>';
+    sec.appendChild(div);
+  });
+  wrap.appendChild(sec);
+}
+
+// ─ 스페인어: 발음 규칙 ─
+function buildSpaRules(wrap){
+  const rules=[
+    {char:'H',desc:'항상 묵음! Hola=올라, Hotel=오텔. H는 절대 소리가 안 나요!'},
+    {char:'C+e/i',desc:'"스/씨"! Cena(쎄나=저녁), Cinco(씽코=5). 스페인은 th에 가까운 소리!'},
+    {char:'C+a/o/u',desc:'"카/코/쿠"! Casa(카사=집), Como(코모=어떻게). 영어 k와 같아요.'},
+    {char:'G+e/i',desc:'"ㅎ"에 가까운 소리! Gente(헨테=사람들), Gitano(히타노=집시)'},
+    {char:'G+a/o/u',desc:'"가/고/구"! Gato(가토=고양이), Gusto(구스토=맛/취향)'},
+    {char:'J',desc:'"ㅎ"! Jamón(하몬=하몽), Julio(훌리오=줄리어스). 영어 J가 아니에요!'},
+    {char:'LL',desc:'"야/여/요" 비슷한 소리! Llama(야마), Llave(야베=열쇠)'},
+    {char:'RR',desc:'혀를 떨어서 강한 "rrr"! Perro(페로=개), Carro(카로=차)'},
+    {char:'QU+e/i',desc:'"케/키"! Queso(케소=치즈), Quiero(키에로=원해)'},
+    {char:'V',desc:'스페인어에서 B와 같은 소리! Vino=비노, Bueno=부에노'},
+  ];
+  const sec=document.createElement('div');sec.className='script-section';
+  sec.innerHTML='<div class="script-section-title">🇪🇸 스페인어 발음 규칙</div><div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:6px;">규칙이 일관돼서 한번 외우면 모든 단어를 읽을 수 있어요!</div>';
+  rules.forEach(r=>{
+    const div=document.createElement('div');div.className='rule-item';
+    div.innerHTML='<div class="rule-char">'+r.char+'</div><div class="rule-desc">'+r.desc+'</div>';
+    sec.appendChild(div);
+  });
+  wrap.appendChild(sec);
+}
+
+// ─ 스페인어: 특수 문자 ─
+function buildSpaSpecial(wrap){
+  const chars=[
+    {char:'Ñ (에녜)',desc:'"냐/뇨/뉴" 비슷한 소리. España(에스파냐=스페인), Mañana(마냐나=내일)'},
+    {char:'¿ ¡',desc:'의문문 앞에 ¿, 느낌표 앞에 ¡를 써요! ¿Cómo estás? / ¡Hola!'},
+    {char:'Á É Í Ó Ú',desc:'강세 표시! 발음은 같지만 어느 음절을 강하게 읽는지 알려줘요.'},
+    {char:'Ü',desc:'GÜ+e/i에서 U를 발음하라는 표시. Pingüino(핑귀노=펭귄)'},
+  ];
+  const sec=document.createElement('div');sec.className='script-section';
+  sec.innerHTML='<div class="script-section-title">✨ 스페인어 특수 문자</div>';
+  chars.forEach(r=>{
+    const div=document.createElement('div');div.className='rule-item';
+    div.innerHTML='<div class="rule-char" style="font-size:13px;min-width:70px;">'+r.char+'</div><div class="rule-desc">'+r.desc+'</div>';
+    sec.appendChild(div);
+  });
+  const tip=document.createElement('div');
+  tip.style.cssText='background:#D1FAE5;border-radius:10px;padding:8px 10px;margin-top:6px;font-size:11px;font-weight:700;color:#065F46;';
+  tip.innerHTML='🎉 스페인어는 발음이 매우 규칙적이에요! 쓰인 대로 읽으면 거의 맞아요. 영어보다 훨씬 쉬워요!';
+  sec.appendChild(tip);
+  wrap.appendChild(sec);
+}
+
+// ─ 태국어: 자음 ─
+function buildThaConsonants(wrap){
+  const groups=[
+    {title:'중자음 (9개) — 기본 성조',chars:[['ก','k/g'],['จ','j'],['ด','d'],['ต','t'],['บ','b'],['ป','p'],['อ','-'],['ฎ','d'],['ฏ','t']]},
+    {title:'고자음 (11개) — 높은 성조 만들기',chars:[['ข','kh'],['ฃ','kh'],['ฉ','ch'],['ฐ','th'],['ถ','th'],['ผ','ph'],['ฝ','f'],['ศ','s'],['ษ','s'],['ส','s'],['ห','h']]},
+    {title:'저자음 (24개) — 낮은 성조 만들기',chars:[['ค','kh'],['ง','ng'],['ช','ch'],['ซ','s'],['ญ','y'],['ณ','n'],['น','n'],['พ','ph'],['ฟ','f'],['ภ','ph'],['ม','m'],['ย','y'],['ร','r'],['ล','l'],['ว','w'],['ฬ','l'],['ฮ','h'],['ฑ','th'],['ฒ','th'],['ธ','th'],['ฆ','kh'],['ฌ','ch'],['ฑ','th'],['ฝ','f']]},
+  ];
+  const sec=document.createElement('div');sec.className='script-section';
+  sec.innerHTML='<div class="script-section-title">🔤 태국어 자음 (44개)</div><div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:6px;">자음은 고·중·저 3등급으로 나뉘고, 등급에 따라 성조가 달라져요!</div>';
+  groups.slice(0,2).forEach(g=>{
+    const div=document.createElement('div');
+    div.style.cssText='margin-bottom:8px;';
+    div.innerHTML='<div style="font-size:11px;font-weight:800;color:var(--purple);margin-bottom:4px;">'+g.title+'</div>';
+    const grid=document.createElement('div');
+    grid.style.cssText='display:flex;flex-wrap:wrap;gap:5px;';
+    g.chars.forEach(c=>{
+      const chip=document.createElement('div');
+      chip.style.cssText='background:#FAF5FF;border:1.5px solid #EDE9FE;border-radius:8px;padding:4px 7px;text-align:center;cursor:pointer;min-width:36px;';
+      chip.innerHTML='<div style="font-size:18px;font-weight:800;">'+c[0]+'</div><div style="font-size:9px;color:var(--muted);font-weight:700;">'+c[1]+'</div>';
+      chip.onclick=()=>speakChar(c[0],'th-TH');
+      grid.appendChild(chip);
+    });
+    div.appendChild(grid);
+    sec.appendChild(div);
+  });
+  const tip=document.createElement('div');
+  tip.style.cssText='background:#FEF3C7;border-radius:10px;padding:8px 10px;font-size:11px;font-weight:700;color:var(--text);';
+  tip.innerHTML='💡 탭하면 발음을 들을 수 있어요! 저자음은 너무 많아서 자주 쓰는 것부터 익히는 게 좋아요.';
+  sec.appendChild(tip);
+  wrap.appendChild(sec);
+}
+
+// ─ 태국어: 5성조 ─
+function buildThaTones(wrap){
+  const tones=[
+    {name:'중성조',mark:'สามัญ',color:'#6B7280',bg:'#F9FAFB',desc:'기본 성조. 중간 높이에서 평탄하게.',ex:'กา (까=까마귀)'},
+    {name:'저성조',mark:'เอก (−)',color:'#3B82F6',bg:'#EFF6FF',desc:'낮고 평탄하게. 중성조보다 낮은 높이.',ex:'ก่า (까=욕설 ++)'},
+    {name:'하강성조',mark:'โท (−−)',color:'#8B5CF6',bg:'#F5F3FF',desc:'높은 데서 낮게 내려가요.',ex:'ก้า (까=진행하다)'},
+    {name:'고성조',mark:'ตรี (‾)',color:'#F59E0B',bg:'#FFFBEB',desc:'높고 평탄하게. 1성조보다 높아요.',ex:'ก๊า (까 높게)'},
+    {name:'상승성조',mark:'จัตวา (↗)',color:'#10B981',bg:'#ECFDF5',desc:'낮게 시작해서 높게 올라가요.',ex:'ก๋า (까 올려서)'},
+  ];
+  const sec=document.createElement('div');sec.className='script-section';
+  sec.innerHTML='<div class="script-section-title">🎵 태국어 5가지 성조</div><div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:6px;">같은 글자도 성조 기호에 따라 완전히 다른 뜻!</div>';
+  tones.forEach(t=>{
+    const div=document.createElement('div');
+    div.style.cssText='background:'+t.bg+';border-radius:10px;padding:7px 10px;margin-bottom:5px;display:flex;align-items:center;gap:8px;';
+    div.innerHTML='<div style="font-family:Fredoka One,cursive;font-size:13px;color:'+t.color+';min-width:50px;">'+t.name+'</div>'
+      +'<div style="font-size:12px;color:'+t.color+';font-weight:800;min-width:50px;">'+t.mark+'</div>'
+      +'<div><div style="font-size:11px;font-weight:700;color:#1f2937;">'+t.desc+'</div>'
+      +'<div style="font-size:11px;font-weight:800;color:'+t.color+';margin-top:1px;">'+t.ex+'</div></div>';
+    sec.appendChild(div);
+  });
+  wrap.appendChild(sec);
+}
+
+// ─ 태국어: 발음 팁 ─
+function buildThaTips(wrap){
+  const tips=[
+    {char:'모음 위치',desc:'태국어 모음은 자음 위/아래/앞/뒤/사방에 붙어요! 읽는 순서는 자음 먼저.'},
+    {char:'묵음 ์',desc:'이 기호(ทัณฑฆาต)가 붙으면 그 글자는 발음하지 않아요!'},
+    {char:'받침 발음',desc:'태국어 받침은 k/t/p/ng/n/m/y/w 8가지만 사용해요.'},
+    {char:'크랍/카',desc:'ครับ(크랍·남성), ค่ะ(카·여성)는 문장 끝에 붙여서 공손함을 표현해요.'},
+    {char:'단어 띄어쓰기',desc:'태국어는 단어 사이를 띄어 쓰지 않아요! 문맥으로 단어를 구분해요.'},
+  ];
+  const sec=document.createElement('div');sec.className='script-section';
+  sec.innerHTML='<div class="script-section-title">💡 태국어 핵심 팁</div>';
+  tips.forEach(t=>{
+    const div=document.createElement('div');div.className='rule-item';
+    div.innerHTML='<div class="rule-char" style="font-size:11px;min-width:65px;line-height:1.3;">'+t.char+'</div><div class="rule-desc">'+t.desc+'</div>';
+    sec.appendChild(div);
+  });
+  wrap.appendChild(sec);
+}
+
+// ─ 이탈리아어: 발음 규칙 ─
+function buildItaRules(wrap){
+  const rules=[
+    {char:'C+e/i',desc:'"치/체"! Ciao(챠오), Cena(체나=저녁). ch 소리!'},
+    {char:'C+a/o/u',desc:'"카/코/쿠"! Casa(카사=집), Coma(코마=혼수).'},
+    {char:'CH+e/i',desc:'"케/키"! Che(케=무엇), Chiave(키아베=열쇠).'},
+    {char:'G+e/i',desc:'"지/제"! Gelato(젤라토), Giro(지로=여행).'},
+    {char:'G+a/o/u',desc:'"가/고/구"! Gatto(가토=고양이), Gusto(구스토).'},
+    {char:'GH+e/i',desc:'"게/기"! Spaghetti(스파게티), Ghiaccio(기아쵸=얼음).'},
+    {char:'SC+e/i',desc:'"쉬/쉐"! Scena(쉐나=장면), Sci(쉬=스키).'},
+    {char:'SC+a/o/u',desc:'"스카/스코/스쿠"! Scola, Scuro.'},
+    {char:'GLI',desc:'"리" — 영어 million의 ll처럼! Figlio(필리오=아들).'},
+    {char:'GN',desc:'"냐/뇨"! Gnocchi(뇨키=뇨키), Lasagna(라자냐).'},
+    {char:'Z/ZZ',desc:'"츠/드즈"! Pizza(피차), Zona(초나=지역).'},
+    {char:'H',desc:'항상 묵음! Ho(오=나는 가진다), Hotel(오텔).'},
+  ];
+  const sec=document.createElement('div');sec.className='script-section';
+  sec.innerHTML='<div class="script-section-title">🇮🇹 이탈리아어 발음 규칙</div><div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:6px;">C와 G가 뒤에 오는 모음에 따라 발음이 바뀌는 게 핵심이에요!</div>';
+  rules.forEach(r=>{
+    const div=document.createElement('div');div.className='rule-item';
+    div.innerHTML='<div class="rule-char">'+r.char+'</div><div class="rule-desc">'+r.desc+'</div>';
+    sec.appendChild(div);
+  });
+  wrap.appendChild(sec);
+}
+
+// ─ 이탈리아어: 모음 & 강세 ─
+function buildItaVowels(wrap){
+  const vowels=[
+    {char:'A',sound:'아',ex:'Amore(아모레=사랑), Casa(카사=집)'},
+    {char:'E',sound:'에/이에',ex:'Bene(베네=좋아), Essere(에세레=이다)'},
+    {char:'I',sound:'이',ex:'Vino(비노=와인), Pizza(피차=피자)'},
+    {char:'O',sound:'오',ex:'Sole(솔레=태양), Cosa(코사=것/뭐)'},
+    {char:'U',sound:'우',ex:'Uomo(우오모=남자), Due(두에=2)'},
+  ];
+  const sec=document.createElement('div');sec.className='script-section';
+  sec.innerHTML='<div class="script-section-title">🎵 이탈리아어 모음 & 강세</div><div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:6px;">이탈리아어 모음은 항상 같은 소리예요! 영어보다 훨씬 규칙적이에요.</div>';
+  const table=document.createElement('div');
+  vowels.forEach(v=>{
+    const row=document.createElement('div');row.className='rule-item';
+    row.style.cursor='pointer';
+    row.innerHTML='<div class="rule-char" style="font-size:22px;">'+v.char+'</div>'
+      +'<div><div style="font-size:13px;font-weight:800;color:var(--purple);">"'+v.sound+'"</div>'
+      +'<div style="font-size:11px;font-weight:700;color:var(--text);">'+v.ex+'</div></div>';
+    sec.appendChild(row);
+  });
+  const tips=[
+    {char:'강세 규칙',desc:'대부분 뒤에서 두 번째 음절에 강세. Mangio(MAN-jo), Amore(a-MO-re)'},
+    {char:'강세 기호 à è',desc:'강세 기호가 있으면 그 모음에 강세! Città(칫타=도시), Perché(페르케=왜냐면)'},
+    {char:'겹자음 강세',desc:'LL, MM, RR처럼 겹자음 앞 음절에 강세! Bello(BEL-lo), Pizza(PIT-za)'},
+  ];
+  const sec2=document.createElement('div');sec2.className='script-section';
+  sec2.innerHTML='<div class="script-section-title">💡 강세 규칙</div>';
+  tips.forEach(t=>{
+    const div=document.createElement('div');div.className='rule-item';
+    div.innerHTML='<div class="rule-char" style="font-size:11px;min-width:65px;line-height:1.3;">'+t.char+'</div><div class="rule-desc">'+t.desc+'</div>';
+    sec2.appendChild(div);
+  });
+  const greenTip=document.createElement('div');
+  greenTip.style.cssText='background:#D1FAE5;border-radius:10px;padding:8px 10px;margin-top:6px;font-size:11px;font-weight:700;color:#065F46;';
+  greenTip.innerHTML='🎉 이탈리아어는 쓰인 대로 읽으면 거의 맞아요! 스페인어와 비슷하게 매우 규칙적이에요.';
+  sec2.appendChild(greenTip);
+  wrap.appendChild(sec);
+  wrap.appendChild(sec2);
+}
+
+// ─ 공통: 글자 발음 ─
+function speakChar(text, lang){
+  if(!window.speechSynthesis) return;
+  speechSynthesis.cancel();
+  const utt=new SpeechSynthesisUtterance(text);
+  utt.lang=lang; utt.rate=0.8; utt.pitch=1.1;
+  speechSynthesis.speak(utt);
+}
+
 function goTest(){
   stageIdx=0;qIdx=0;answered=false;stageCorrect=0;totalCorrect=0;totalAsked=0;reachedStage=1;
   showStep('s-test');renderQ();
@@ -1387,9 +1837,31 @@ function showResult(){
   langCfg.levels.forEach(l=>{
     const isActive=l.cardLv===cardLevel;
     const div=document.createElement('div');div.className='lcp-card'+(isActive?' active':'');
-    div.innerHTML='<span class="lcp-emoji">'+l.emoji+'</span><div class="lcp-name">'+l.title+'</div><div class="lcp-badge">'+(isActive?'← 내 레벨':l.cardName)+'</div>';
+    div.innerHTML='<span class="lcp-emoji">'+l.emoji+'</span><div class="lcp-name">'+l.title+'</div><div class="lcp-badge">'+(isActive?'✓ 선택됨':l.cardName)+'</div>';
+    // 클릭하면 해당 레벨 선택
+    div.onclick=(function(lv){
+      return function(){
+        cardLevel=lv.cardLv;
+        // 모든 카드 선택 해제
+        document.querySelectorAll('.lcp-card').forEach(c=>{
+          c.classList.remove('active');
+          const badge=c.querySelector('.lcp-badge');
+          if(badge&&badge.innerText==='✓ 선택됨') badge.innerText=c._cardName||'';
+        });
+        // 이 카드 선택
+        div.classList.add('active');
+        div.querySelector('.lcp-badge').innerText='✓ 선택됨';
+        // 버튼 텍스트 업데이트
+        const btn=document.getElementById('fc-start-btn');
+        if(btn) btn.innerText=lv.emoji+' '+lv.title+' 카드로 시작 🚀';
+      };
+    })(l);
+    div._cardName=l.cardName;
     prev.appendChild(div);
   });
+  // 시작 버튼 초기 텍스트
+  const startBtn=document.getElementById('fc-start-btn');
+  if(startBtn) startBtn.innerText=lvl.emoji+' '+lvl.title+' 카드로 시작 🚀';
   saveProgress(); // 레벨 결과 저장!
 }
 function goFlashcard(){
