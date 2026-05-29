@@ -848,20 +848,20 @@ function showSavedBanner(data) {
   const levelNames = ['','씨앗','새싹','꽃봉오리','개화','파워','다이아'];
   const banner = document.createElement('div');
   banner.style.cssText = 'background:linear-gradient(135deg,#FAF5FF,#F0E8FF);border:2px solid #EDE9FE;border-radius:14px;padding:10px 14px;margin-bottom:.8rem;display:flex;align-items:center;justify-content:space-between;gap:8px;';
-  banner.innerHTML = \`
-    <div>
-      <div style="font-family:'Fredoka One',cursive;font-size:13px;color:var(--purple);">✨ 이어하기</div>
-      <div style="font-size:11px;font-weight:700;color:var(--text);margin-top:2px;">
-        \${langNames[data.lang]||data.lang} · \${levelNames[data.cardLevel]||''}단계
-        \${data.studyDays > 1 ? '<span style="color:var(--coral);font-weight:800;">🔥 '+data.studyDays+'일 연속!</span>' : ''}
-      </div>
-      <div style="font-size:10px;color:var(--muted);font-weight:600;margin-top:1px;">카드 수집함 \${Object.keys(data.fcCollection||{}).length}개 저장됨</div>
-    </div>
-    <div style="display:flex;gap:5px;">
-      <button onclick="resumeStudy()" style="padding:6px 12px;background:linear-gradient(135deg,var(--pink),var(--purple));color:white;border:none;border-radius:20px;font-family:'Nunito',sans-serif;font-size:11px;font-weight:800;cursor:pointer;">이어하기 →</button>
-      <button onclick="this.parentElement.parentElement.remove();clearProgress();" style="padding:6px 10px;background:#F0E8FF;color:var(--purple);border:none;border-radius:20px;font-size:11px;font-weight:800;cursor:pointer;">처음부터</button>
-    </div>
-  \`;
+  var langName = langNames[data.lang] || data.lang;
+  var levelName = (levelNames[data.cardLevel] || '') + '단계';
+  var streakHtml = data.studyDays > 1 ? '<span style="color:var(--coral);font-weight:800;">🔥 ' + data.studyDays + '일 연속!</span>' : '';
+  var collCount = Object.keys(data.fcCollection || {}).length;
+  banner.innerHTML =
+    '<div>' +
+      '<div style="font-family:Nunito,sans-serif;font-size:13px;font-weight:800;color:var(--purple);">✨ 이어하기</div>' +
+      '<div style="font-size:11px;font-weight:700;color:var(--text);margin-top:2px;">' + langName + ' · ' + levelName + ' ' + streakHtml + '</div>' +
+      '<div style="font-size:10px;color:var(--muted);font-weight:600;margin-top:1px;">카드 수집함 ' + collCount + '개 저장됨</div>' +
+    '</div>' +
+    '<div style="display:flex;gap:5px;">' +
+      '<button onclick="resumeStudy()" style="padding:6px 12px;background:linear-gradient(135deg,var(--pink),var(--purple));color:white;border:none;border-radius:20px;font-family:Nunito,sans-serif;font-size:11px;font-weight:800;cursor:pointer;">이어하기 →</button>' +
+      '<button onclick="this.parentElement.parentElement.remove();clearProgress();" style="padding:6px 10px;background:#F0E8FF;color:var(--purple);border:none;border-radius:20px;font-size:11px;font-weight:800;cursor:pointer;">처음부터</button>' +
+    '</div>';
   const sLang = document.getElementById('s-lang');
   if (sLang) sLang.insertBefore(banner, sLang.firstChild);
 }
