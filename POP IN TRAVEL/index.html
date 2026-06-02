@@ -1318,6 +1318,7 @@ const SCRIPT_DATA = {
       {id:'hira',label:'히라가나',content:buildHiragana},
       {id:'kata',label:'가타카나',content:buildKatakana},
       {id:'tips',label:'발음 팁',content:buildJpnTips},
+      {id:'practice',label:'읽기 연습',content:buildJpnPractice},
     ]
   },
   chn:{
@@ -1325,12 +1326,14 @@ const SCRIPT_DATA = {
       {id:'tone',label:'4가지 성조',content:buildChnTones},
       {id:'pinyin',label:'병음 읽기',content:buildChnPinyin},
       {id:'tips',label:'발음 팁',content:buildChnTips},
+      {id:'practice',label:'읽기 연습',content:buildChnPractice},
     ]
   },
   spa:{
     sections:[
       {id:'rules',label:'발음 규칙',content:buildSpaRules},
       {id:'special',label:'특수 문자',content:buildSpaSpecial},
+      {id:'practice',label:'읽기 연습',content:buildSpaPractice},
     ]
   },
   tha:{
@@ -1338,12 +1341,14 @@ const SCRIPT_DATA = {
       {id:'consonants',label:'자음',content:buildThaConsonants},
       {id:'tones',label:'5가지 성조',content:buildThaTones},
       {id:'tips',label:'발음 팁',content:buildThaTips},
+      {id:'practice',label:'읽기 연습',content:buildThaPractice},
     ]
   },
   ita:{
     sections:[
       {id:'rules',label:'발음 규칙',content:buildItaRules},
       {id:'vowels',label:'모음 & 강세',content:buildItaVowels},
+      {id:'practice',label:'읽기 연습',content:buildItaPractice},
     ]
   },
 };
@@ -1728,6 +1733,224 @@ function buildItaVowels(wrap){
   sec2.appendChild(greenTip);
   wrap.appendChild(sec);
   wrap.appendChild(sec2);
+}
+
+
+// ═══════════════════════════════════════════
+// 읽기 연습 공통 함수
+// ═══════════════════════════════════════════
+function buildPracticeSection(wrap, lang, bcp, items){
+  const sec = document.createElement('div');
+  sec.className = 'script-section';
+  sec.innerHTML = '<div class="script-section-title">✏️ 읽기 연습 — 단어를 보고 어떻게 읽는지 맞혀보세요!</div>'
+    + '<div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:.7rem;">카드를 탭하면 발음이 나와요. 뒤집으면 읽는 법과 규칙이 보여요!</div>';
+
+  let idx = 0;
+
+  function renderCard(){
+    const item = items[idx];
+    cardWrap.innerHTML = '';
+
+    // 카드
+    const card = document.createElement('div');
+    card.style.cssText = 'background:linear-gradient(145deg,#7C3AED,#A855F7,#EC4899);border-radius:20px;padding:1.2rem;text-align:center;color:white;cursor:pointer;position:relative;min-height:130px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;box-shadow:0 8px 24px rgba(168,85,247,.35);transition:all .3s;';
+    card.innerHTML = '<div style="font-size:32px;font-weight:800;letter-spacing:2px;">' + item.word + '</div>'
+      + '<div style="font-size:12px;opacity:.8;">' + lang + ' · 탭하면 발음이 나와요 🔊</div>'
+      + '<div style="font-size:11px;opacity:.6;">👆 탭해서 뒤집기</div>';
+
+    let flipped = false;
+    card.onclick = function(){
+      // 발음 재생
+      if(window.speechSynthesis){
+        speechSynthesis.cancel();
+        const utt = new SpeechSynthesisUtterance(item.word);
+        utt.lang = bcp; utt.rate = 0.8;
+        speechSynthesis.speak(utt);
+      }
+      if(!flipped){
+        flipped = true;
+        card.style.background = 'white';
+        card.style.color = 'var(--text)';
+        card.style.border = '2.5px solid #EDE9FE';
+        card.style.boxShadow = '0 8px 24px rgba(168,85,247,.1)';
+        card.innerHTML = '<div style="font-size:26px;font-weight:800;color:var(--purple);">' + item.word + '</div>'
+          + '<div style="font-size:22px;font-weight:800;color:var(--pink);">' + item.read + '</div>'
+          + '<div style="font-size:11px;font-weight:700;color:var(--text);background:#FAF5FF;border-radius:8px;padding:5px 10px;margin-top:4px;">'
+          + '📌 ' + item.rule + '</div>'
+          + (item.meaning ? '<div style="font-size:12px;font-weight:700;color:var(--muted);">뜻: ' + item.meaning + '</div>' : '');
+      } else {
+        flipped = false;
+        card.style.background = 'linear-gradient(145deg,#7C3AED,#A855F7,#EC4899)';
+        card.style.color = 'white';
+        card.style.border = 'none';
+        card.style.boxShadow = '0 8px 24px rgba(168,85,247,.35)';
+        card.innerHTML = '<div style="font-size:32px;font-weight:800;letter-spacing:2px;">' + item.word + '</div>'
+          + '<div style="font-size:12px;opacity:.8;">' + lang + ' · 탭하면 발음이 나와요 🔊</div>'
+          + '<div style="font-size:11px;opacity:.6;">👆 탭해서 뒤집기</div>';
+      }
+    };
+    cardWrap.appendChild(card);
+
+    // 진행바
+    progTxt.innerText = (idx+1) + ' / ' + items.length;
+    progFill.style.width = ((idx+1)/items.length*100) + '%';
+    prevBtn.disabled = idx === 0;
+    nextBtn.innerText = idx === items.length-1 ? '처음부터 🔄' : '다음 →';
+  }
+
+  const cardWrap = document.createElement('div');
+  cardWrap.style.marginBottom = '.8rem';
+
+  // 진행바
+  const progRow = document.createElement('div');
+  progRow.style.cssText = 'display:flex;align-items:center;gap:7px;margin-bottom:.7rem;';
+  const progBar = document.createElement('div');
+  progBar.style.cssText = 'flex:1;height:6px;background:#F0E8FF;border-radius:20px;overflow:hidden;';
+  const progFill = document.createElement('div');
+  progFill.style.cssText = 'height:100%;background:linear-gradient(90deg,var(--pink),var(--purple));border-radius:20px;transition:width .3s;';
+  progBar.appendChild(progFill);
+  const progTxt = document.createElement('div');
+  progTxt.style.cssText = 'font-size:11px;font-weight:800;color:var(--muted);white-space:nowrap;';
+  progRow.appendChild(progBar);
+  progRow.appendChild(progTxt);
+
+  // 버튼
+  const btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:.6rem;';
+  const prevBtn = document.createElement('button');
+  prevBtn.style.cssText = 'padding:9px;background:white;border:2px solid #EDE9FE;border-radius:12px;font-family:Nunito,sans-serif;font-size:13px;font-weight:800;cursor:pointer;color:var(--muted);';
+  prevBtn.innerText = '← 이전';
+  prevBtn.onclick = function(){ if(idx>0){idx--;renderCard();} };
+  const nextBtn = document.createElement('button');
+  nextBtn.style.cssText = 'padding:9px;background:linear-gradient(135deg,var(--pink),var(--purple));border:none;border-radius:12px;font-family:Nunito,sans-serif;font-size:13px;font-weight:800;cursor:pointer;color:white;';
+  nextBtn.onclick = function(){
+    if(idx < items.length-1){ idx++; renderCard(); }
+    else { idx=0; renderCard(); }
+  };
+  btnRow.appendChild(prevBtn);
+  btnRow.appendChild(nextBtn);
+
+  sec.appendChild(progRow);
+  sec.appendChild(cardWrap);
+  sec.appendChild(btnRow);
+
+  // 전체 목록 미리보기
+  const listTitle = document.createElement('div');
+  listTitle.style.cssText = 'font-size:11px;font-weight:800;color:var(--muted);margin-top:.8rem;margin-bottom:5px;';
+  listTitle.innerText = '📋 전체 단어 목록 (탭해서 바로 이동)';
+  const listWrap = document.createElement('div');
+  listWrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:5px;';
+  items.forEach((item,i)=>{
+    const chip = document.createElement('div');
+    chip.style.cssText = 'background:white;border:2px solid #EDE9FE;border-radius:20px;padding:4px 10px;font-size:12px;font-weight:800;cursor:pointer;color:var(--text);transition:all .15s;';
+    chip.innerText = item.word;
+    chip.title = item.read;
+    chip.onclick = function(){ idx=i; renderCard(); chip.style.background='#FAF5FF'; chip.style.borderColor='var(--purple)'; };
+    listWrap.appendChild(chip);
+  });
+  sec.appendChild(listTitle);
+  sec.appendChild(listWrap);
+  wrap.appendChild(sec);
+  renderCard();
+}
+
+// ─ 일본어 읽기 연습 ─
+function buildJpnPractice(wrap){
+  const items = [
+    {word:'すし',read:'스시',rule:'す(su)+し(shi) → 스시! s계열은 sa/shi/su/se/so',meaning:'초밥'},
+    {word:'さくら',read:'사쿠라',rule:'さ(sa)+く(ku)+ら(ra) → 사+쿠+라!',meaning:'벚꽃'},
+    {word:'ありがとう',read:'아리가토우',rule:'あ(a)+り(ri)+が(ga)+と(to)+う(u)',meaning:'감사해요'},
+    {word:'おはよう',read:'오하요우',rule:'お(o)+は(ha)+よ(yo)+う(u) → 오하요우!',meaning:'안녕 (아침)'},
+    {word:'たべる',read:'타베루',rule:'た(ta)+べ(be)+る(ru) → 타베루',meaning:'먹다'},
+    {word:'みず',read:'미즈',rule:'み(mi)+ず(zu) → 미즈! ず는 す에 탁점(゛)',meaning:'물'},
+    {word:'にほん',read:'니혼',rule:'に(ni)+ほ(ho)+ん(n) → 니혼! ん은 받침 n',meaning:'일본'},
+    {word:'えき',read:'에키',rule:'え(e)+き(ki) → 에키',meaning:'역'},
+    {word:'コーヒー',read:'코히',rule:'コ(ko)+ー(장음)+ヒ(hi)+ー(장음) → 코~히~',meaning:'커피 (가타카나)'},
+    {word:'テレビ',read:'테레비',rule:'テ(te)+レ(re)+ビ(bi) → 테레비',meaning:'TV (가타카나)'},
+    {word:'つくえ',read:'츠쿠에',rule:'つ(tsu)+く(ku)+え(e) → 츠+쿠+에',meaning:'책상'},
+    {word:'がっこう',read:'각코우',rule:'が(ga)+っ(촉음)+こ(ko)+う(u) → っ는 뒤 자음 강하게!',meaning:'학교'},
+  ];
+  buildPracticeSection(wrap, '일본어', 'ja-JP', items);
+}
+
+// ─ 중국어 읽기 연습 ─
+function buildChnPractice(wrap){
+  const items = [
+    {word:'tian',read:'티엔',rule:'ian = 이안 ❌ → 이엔 ✅! ian은 항상 "엔"으로 읽어요',meaning:'하늘 天'},
+    {word:'xue',read:'쉬에',rule:'x = "시/쉬". xue = x(쉬)+ue(에) → 쉬에',meaning:'눈 雪'},
+    {word:'zhong',read:'쭝',rule:'zh = 혀를 말아 올리는 "즈". zhong = 즈+ong → 쭝',meaning:'중간 中'},
+    {word:'qing',read:'칭',rule:'q = "치". qing = 치+ing → 칭. 请(부탁드려요)의 발음!',meaning:'부탁 请'},
+    {word:'nv',read:'뉘',rule:'v = ü(위). nv = n+ü → 뉘! 女(여자)의 발음이에요',meaning:'여자 女'},
+    {word:'hui',read:'훼이',rule:'ui = 우이 ❌ → 웨이 ✅! 회의할 때 쓰는 会(hui)예요',meaning:'할 수 있다 会'},
+    {word:'xian',read:'시엔',rule:'x(시)+ian(이엔) → 시+엔 → 시엔! 先(먼저)의 발음',meaning:'먼저 先'},
+    {word:'zhe',read:'쩌',rule:'zh(즈)+e(으어) → 쩌. 这(이것)의 발음이에요',meaning:'이것 这'},
+    {word:'chi',read:'츠',rule:'ch = 혀를 말아 "츠". chi = 츠! 吃(먹다)의 발음',meaning:'먹다 吃'},
+    {word:'liu',read:'리우',rule:'liu = li+u → 리우! 六(6)의 발음이에요',meaning:'여섯 六'},
+    {word:'guo',read:'궈',rule:'g(g)+uo(우어) → 궈! 国(나라)의 발음',meaning:'나라 国'},
+    {word:'shui',read:'쉐이',rule:'sh(쉬)+ui(웨이) → 쉐이! 水(물)의 발음',meaning:'물 水'},
+  ];
+  buildPracticeSection(wrap, '중국어', 'zh-CN', items);
+}
+
+// ─ 스페인어 읽기 연습 ─
+function buildSpaPractice(wrap){
+  const items = [
+    {word:'hola',read:'올라',rule:'H는 항상 묵음! hola = (h묵음)+o+la → 올라',meaning:'안녕'},
+    {word:'hotel',read:'오텔',rule:'H묵음 + otel → 오텔. 영어와 다르게 h 발음 안 해요!',meaning:'호텔'},
+    {word:'queso',read:'케소',rule:'QU+e = "케"! qu+e+so → 케소',meaning:'치즈'},
+    {word:'gente',read:'헨테',rule:'G+e = "ㅎ"! g+en+te → 헨테',meaning:'사람들'},
+    {word:'cerveza',read:'세르베사',rule:'C+e = "세". cer+ve+za → 세르베사',meaning:'맥주'},
+    {word:'ciudad',read:'씨우닷',rule:'C+iu = "씨". ciu+dad → 씨우닷',meaning:'도시'},
+    {word:'perro',read:'페로',rule:'RR = 혀 떨기! per+ro → 페~로 (강하게)',meaning:'개'},
+    {word:'pero',read:'페로',rule:'R 하나 = 부드럽게. per+o → 페로 (약하게)',meaning:'하지만 (perro와 비교!)'},
+    {word:'llamo',read:'야모',rule:'LL = "야/여/요"! lla+mo → 야모',meaning:'(나는) 불린다'},
+    {word:'julio',read:'훌리오',rule:'J = "ㅎ"! ju+lio → 훌리오',meaning:'줄리어스/7월'},
+    {word:'cinco',read:'씽코',rule:'C+in = "씽". cin+co → 씽코',meaning:'5'},
+    {word:'gracias',read:'그라시아스',rule:'G+ra = "그라". gra+cias → 그라시아스',meaning:'감사해요'},
+    {word:'espanol',read:'에스파뇰',rule:'Ñ = "뇨". es+pa+nol → 에스파뇰',meaning:'스페인어'},
+    {word:'excelente',read:'엑셀렌테',rule:'X = "ks". ex+ce+len+te → 엑셀렌테',meaning:'훌륭해요'},
+  ];
+  buildPracticeSection(wrap, '스페인어', 'es-ES', items);
+}
+
+// ─ 태국어 읽기 연습 ─
+function buildThaPractice(wrap){
+  const items = [
+    {word:'กา',read:'까',rule:'ก(k/g) + า(아) → 까. 중자음+장모음 = 중성조',meaning:'까마귀'},
+    {word:'มา',read:'마',rule:'ม(m) + า(아) → 마. 저자음+장모음',meaning:'오다'},
+    {word:'น้ำ',read:'남',rule:'น(n) + ้า(아,저성조) + ม(m받침) → 남',meaning:'물'},
+    {word:'ข้าว',read:'카오',rule:'ข(kh,고자음) + ้า(하강성조) + ว(w받침) → 카오',meaning:'쌀/밥'},
+    {word:'แมว',read:'매우',rule:'แ(애모음) + ม(m) + ว(w) → 매우',meaning:'고양이'},
+    {word:'ดี',read:'디',rule:'ด(d,중자음) + ี(이,장모음) → 디. 중자음+장모음=중성조',meaning:'좋다'},
+    {word:'ไป',read:'빠이',rule:'ไ(아이모음) + ป(p) → 빠이',meaning:'가다'},
+    {word:'กิน',read:'낀',rule:'ก(k) + ิ(이) + น(n받침) → 낀',meaning:'먹다'},
+    {word:'ใหญ่',read:'야이',rule:'ใ(아이모음) + ห(h) + ญ(y) → 야이. ห는 고자음화!',meaning:'크다'},
+    {word:'สวย',read:'쑤어이',rule:'ส(s,고자음) + ว(우모음) + ย(이받침) → 쑤어이',meaning:'예쁘다'},
+    {word:'เมือง',read:'므앙',rule:'เ-ือ(으어모음) + ม(m) + ง(ng받침) → 므앙',meaning:'도시/나라'},
+    {word:'สวัสดี',read:'사와디',rule:'ส+ว+ั+ส+ด+ี = 사+와+디. 인사할 때!',meaning:'안녕하세요'},
+  ];
+  buildPracticeSection(wrap, '태국어', 'th-TH', items);
+}
+
+// ─ 이탈리아어 읽기 연습 ─
+function buildItaPractice(wrap){
+  const items = [
+    {word:'ciao',read:'챠오',rule:'C+ia = "챠"(c+i이므로 ch소리). ciao → 챠오',meaning:'안녕'},
+    {word:'gelato',read:'젤라토',rule:'G+e = "제"! ge+la+to → 젤라토',meaning:'아이스크림'},
+    {word:'pizza',read:'피짜',rule:'ZZ = "츠/짜". piz+za → 피짜. 겹자음 앞에 강세!',meaning:'피자'},
+    {word:'spaghetti',read:'스파게티',rule:'GH+e = "게"! spa+ghet+ti → 스파게티',meaning:'스파게티'},
+    {word:'grazie',read:'그라찌에',rule:'Z = "츠/즈". gra+zie → 그라찌에',meaning:'감사해요'},
+    {word:'buongiorno',read:'부온조르노',rule:'G+io = "조". buon+gior+no → 부온조르노',meaning:'안녕하세요(낮)'},
+    {word:'prego',read:'프레고',rule:'G+o = "고". pre+go → 프레고. G+a/o/u는 항상 "g"!',meaning:'천만에요'},
+    {word:'scusi',read:'스쿠지',rule:'SC+u = "스쿠". scu+si → 스쿠지',meaning:'실례합니다'},
+    {word:'chiesa',read:'키에사',rule:'CH+ie = "키에". chie+sa → 키에사',meaning:'교회'},
+    {word:'figlio',read:'필리오',rule:'GLI = "리". fi+glio → 필리오',meaning:'아들'},
+    {word:'gnocchi',read:'뇨키',rule:'GN = "뇨". gnoc+chi → 뇨키',meaning:'뇨키(요리)'},
+    {word:'lasagna',read:'라자냐',rule:'GN = "냐". la+sa+gna → 라자냐',meaning:'라자냐'},
+    {word:'arrivederci',read:'아리베데르치',rule:'C+i = "치". ar+ri+ve+der+ci → 아리베데르치',meaning:'안녕히 가세요'},
+    {word:'caffe',read:'카페',rule:'C+a = "카". caf+fe → 카페. FF는 강하게!',meaning:'커피'},
+  ];
+  buildPracticeSection(wrap, '이탈리아어', 'it-IT', items);
 }
 
 // ─ 공통: 글자 발음 ─
