@@ -1033,10 +1033,8 @@ function renderWords(){
 
 function wordSpeak(text){
   if(!window.speechSynthesis||!appState.lang) return;
-  speechSynthesis.cancel();
-  const utt=new SpeechSynthesisUtterance(text);
-  utt.lang=LANG_CFG[appState.lang].bcp; utt.rate=0.85;
-  speechSynthesis.speak(utt);
+  const lang = LANG_CFG[appState.lang].bcp;
+  speakChar(text, lang);
 }
 function getWordEmoji(i){
   return ['✈️','🌸','☕','🍜','🎵','💜','🌟','🏖️','🎭','🌺'][i%10];
@@ -1535,7 +1533,10 @@ async function runGrammar(){
   }catch(e){hideLoading('coach-loading',timer);document.getElementById('coach-result').innerHTML=`<div style="text-align:center;padding:1rem;background:white;border-radius:18px;"><div style="font-size:24px;">😢</div><div style="font-size:12px;font-weight:800;color:#EF4444;">${e.message}</div></div>`;}
 }
 
-function coachSpeak(text){if(!window.speechSynthesis)return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang=coachBcp;u.rate=0.85;speechSynthesis.speak(u);}
+function coachSpeak(text){
+  if(!window.speechSynthesis||!text)return;
+  speakChar(text, coachBcp);
+}
 function escStr(s){return(s||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');}
 
 
@@ -1642,9 +1643,28 @@ function renderScript(){
 function speakChar(text, lang){
   if(!window.speechSynthesis) return;
   speechSynthesis.cancel();
-  const u=new SpeechSynthesisUtterance(text);
-  u.lang=lang; u.rate=0.8; u.pitch=1.1;
-  speechSynthesis.speak(u);
+  function doSpeak(){
+    const voices = speechSynthesis.getVoices();
+    // 해당 언어 음성 찾기
+    const voice = voices.find(v=>v.lang.startsWith(lang.split('-')[0]));
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = lang;
+    u.rate = 0.75;
+    u.pitch = 1.0;
+    if(voice) u.voice = voice;
+    u.onerror = function(e){
+      console.warn('TTS 오류:', e.error, lang);
+    };
+    speechSynthesis.speak(u);
+  }
+  // 음성 목록이 로드됐는지 확인
+  if(speechSynthesis.getVoices().length > 0){
+    doSpeak();
+  } else {
+    speechSynthesis.addEventListener('voiceschanged', doSpeak, {once:true});
+    // 500ms 후에도 안 되면 그냥 시도
+    setTimeout(doSpeak, 500);
+  }
 }
 
 // ── 공통: 읽기 연습 카드 빌더 ──
@@ -1690,7 +1710,7 @@ function buildPracticeCards(wrap, bcp, items){
     card.style.cssText='background:linear-gradient(145deg,#7C3AED,#A855F7,#EC4899);border-radius:18px;padding:1rem;text-align:center;color:white;cursor:pointer;min-height:105px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;box-shadow:0 7px 20px rgba(168,85,247,.3);';
     card.innerHTML='<div style="font-size:28px;font-weight:800;letter-spacing:2px;">'+item.word+'</div><div style="font-size:11px;opacity:.7;">탭해서 발음 & 정답 확인 🔊</div>';
     card.onclick=function(){
-      if(window.speechSynthesis){ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(item.word); u.lang=bcp; u.rate=0.8; speechSynthesis.speak(u); }
+      speakChar(item.speak||item.word, bcp);
       if(!flipped){
         flipped=true;
         card.style.background='white'; card.style.color='var(--text)'; card.style.border='2.5px solid #EDE9FE'; card.style.boxShadow='none';
@@ -1763,17 +1783,42 @@ function buildJpnTips(wrap){
   wrap.appendChild(sec);
 }
 function buildJpnPractice(wrap){
-  buildPracticeCards(wrap,'ja-JP',[
-    {word:'すし',read:'스시',rule:'す(su)+し(shi)',meaning:'초밥'},
-    {word:'さくら',read:'사쿠라',rule:'さ(sa)+く(ku)+ら(ra)',meaning:'벚꽃'},
-    {word:'ありがとう',read:'아리가토우',rule:'あ+り+が+と+う 각 소리 연결',meaning:'감사해요'},
-    {word:'おはよう',read:'오하요우',rule:'お(o)+は(ha)+よ(yo)+う(u)',meaning:'안녕(아침)'},
-    {word:'たべる',read:'타베루',rule:'た(ta)+べ(be)+る(ru)',meaning:'먹다'},
-    {word:'みず',read:'미즈',rule:'み(mi)+ず(す에 탁점)',meaning:'물'},
-    {word:'コーヒー',read:'코히',rule:'コ+ー(장음)+ヒ+ー',meaning:'커피'},
-    {word:'テレビ',read:'테레비',rule:'テ(te)+レ(re)+ビ(bi)',meaning:'TV'},
-    {word:'がっこう',read:'각코우',rule:'が+っ(촉음)+こ+う',meaning:'학교'},
-  ]);
+  // 도표: 단어 읽기 연습
+  const sec=document.createElement('div'); sec.className='card';
+  sec.innerHTML='<div style="font-size:12px;font-weight:800;color:var(--text);margin-bottom:.3rem;">✏️ 단어 읽기 연습</div>'
+    +'<div style="font-size:10px;color:var(--muted);font-weight:700;margin-bottom:.5rem;">탭하면 발음이 나와요! 히라가나+가타카나 조합을 연습해요.</div>';
+  const words=[
+    {jp:'すし',read:'스시',kr:'초밥',tip:'す+し'},
+    {jp:'さくら',read:'사쿠라',kr:'벚꽃',tip:'さ+く+ら'},
+    {jp:'ありがとう',read:'아리가토우',kr:'감사해요',tip:'5글자 조합'},
+    {jp:'おはよう',read:'오하요우',kr:'안녕(아침)',tip:'お+は+よ+う'},
+    {jp:'たべる',read:'타베루',kr:'먹다',tip:'た+べ+る'},
+    {jp:'みず',read:'미즈',kr:'물',tip:'み+ず(탁음)'},
+    {jp:'コーヒー',read:'코히',kr:'커피',tip:'가타카나+장음ー'},
+    {jp:'テレビ',read:'테레비',kr:'TV',tip:'가타카나 외래어'},
+    {jp:'がっこう',read:'각코우',kr:'학교',tip:'촉음っ 주의!'},
+    {jp:'にほん',read:'니혼',kr:'일본',tip:'に+ほ+ん(받침)'},
+    {jp:'えき',read:'에키',kr:'역',tip:'え+き'},
+    {jp:'でんしゃ',read:'덴샤',kr:'전철',tip:'で+ん+し+ゃ'},
+    {jp:'ありがとうございます',read:'아리가토고자이마스',kr:'감사합니다(정중)',tip:'정중체'},
+    {jp:'すみません',read:'스미마셍',kr:'실례합니다',tip:'す+み+ま+せ+ん'},
+    {jp:'おいしい',read:'오이시이',kr:'맛있다',tip:'お+い+し+い'},
+    {jp:'ホテル',read:'호테루',kr:'호텔',tip:'가타카나 외래어'},
+  ];
+  const grid=document.createElement('div');
+  grid.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:5px;';
+  words.forEach(w=>{
+    const card=document.createElement('div');
+    card.style.cssText='background:#FAF5FF;border-radius:10px;padding:7px 9px;cursor:pointer;border:1.5px solid #EDE9FE;';
+    card.innerHTML='<div style="font-size:16px;font-weight:800;color:var(--purple);">'+w.jp+'</div>'
+      +'<div style="font-size:11px;color:var(--pink);font-weight:700;">'+w.read+'</div>'
+      +'<div style="font-size:10px;color:var(--text);font-weight:700;">'+w.kr+'</div>'
+      +'<div style="font-size:9px;color:var(--muted);">'+w.tip+'</div>';
+    card.onclick=()=>{ speakChar(w.jp, 'ja-JP'); };
+    grid.appendChild(card);
+  });
+  sec.appendChild(grid);
+  wrap.appendChild(sec);
 }
 function buildChnTones(wrap){
   const tones=[{num:'1성',mark:'ā',color:'#3B82F6',bg:'#EFF6FF',shape:'─',desc:'높고 평탄하게!',ex:'妈(māi) 엄마'},{num:'2성',mark:'á',color:'#10B981',bg:'#ECFDF5',shape:'↗',desc:'낮에서 높으로!',ex:'麻(má) 삼'},{num:'3성',mark:'ǎ',color:'#F59E0B',bg:'#FFFBEB',shape:'↘↗',desc:'내려갔다 올라와!',ex:'马(mǎ) 말'},{num:'4성',mark:'à',color:'#EF4444',bg:'#FEF2F2',shape:'↘',desc:'높에서 확 내려가!',ex:'骂(mà) 욕하다'},{num:'경성',mark:'a',color:'#8B5CF6',bg:'#F5F3FF',shape:'·',desc:'가볍고 짧게!',ex:'吗(ma) 의문 어미'}];
@@ -1783,7 +1828,7 @@ function buildChnTones(wrap){
     const d=document.createElement('div');
     d.style.cssText='background:'+t.bg+';border-radius:9px;padding:7px 9px;margin-bottom:4px;display:flex;align-items:center;gap:8px;cursor:pointer;';
     d.innerHTML='<div style="font-family:Fredoka One,cursive;font-size:14px;color:'+t.color+';min-width:28px;">'+t.num+'</div><div style="font-size:22px;font-weight:800;color:'+t.color+';min-width:26px;">'+t.mark+'</div><div style="font-size:14px;color:'+t.color+';min-width:18px;">'+t.shape+'</div><div><div style="font-size:10px;font-weight:700;color:#1f2937;">'+t.desc+'</div><div style="font-size:11px;font-weight:800;color:'+t.color+';">예: '+t.ex+'</div></div>';
-    d.onclick=()=>speakChar(t.ex.split('(')[0],'zh-CN');
+    d.onclick=()=>{ const hanzi=t.ex.split('(')[0]; speakChar(hanzi,'zh-CN'); };
     sec.appendChild(d);
   });
   wrap.appendChild(sec);
@@ -1815,34 +1860,92 @@ function buildSpaRules(wrap){
   wrap.appendChild(sec);
 }
 function buildSpaPractice(wrap){
-  buildPracticeCards(wrap,'es-ES',[
-    {word:'hola',read:'올라',rule:'H는 항상 묵음!',meaning:'안녕'},
-    {word:'hotel',read:'오텔',rule:'H묵음',meaning:'호텔'},
-    {word:'queso',read:'케소',rule:'QU+e="케"',meaning:'치즈'},
-    {word:'gente',read:'헨테',rule:'G+e="ㅎ"',meaning:'사람들'},
-    {word:'perro',read:'페로(강)',rule:'RR=혀 떨기!',meaning:'개'},
-    {word:'pero',read:'페로(약)',rule:'R 하나=부드럽게',meaning:'하지만'},
-    {word:'llamo',read:'야모',rule:'LL="야"',meaning:'(나는)불린다'},
-    {word:'gracias',read:'그라시아스',rule:'G+ra="그라"',meaning:'감사해요'},
-  ]);
+  const sec=document.createElement('div'); sec.className='card';
+  sec.innerHTML='<div style="font-size:12px;font-weight:800;color:var(--text);margin-bottom:.3rem;">✏️ 단어 읽기 연습</div>'
+    +'<div style="font-size:10px;color:var(--muted);font-weight:700;margin-bottom:.5rem;">탭하면 발음! 규칙을 적용해서 읽어보세요.</div>';
+  const words=[
+    {sp:'hola',read:'올라',kr:'안녕',rule:'H=묵음'},
+    {sp:'hotel',read:'오텔',kr:'호텔',rule:'H=묵음'},
+    {sp:'Jesús',read:'헤수스',kr:'예수',rule:'J=ㅎ'},
+    {sp:'julio',read:'훌리오',kr:'7월',rule:'J=ㅎ'},
+    {sp:'queso',read:'케소',kr:'치즈',rule:'QU+e=케'},
+    {sp:'quien',read:'끼엔',kr:'누구',rule:'QU+i=끼'},
+    {sp:'gente',read:'헨테',kr:'사람들',rule:'G+e=ㅎ'},
+    {sp:'girafa',read:'히라파',kr:'기린',rule:'G+i=ㅎ'},
+    {sp:'gato',read:'가토',kr:'고양이',rule:'G+a=가'},
+    {sp:'perro',read:'페로(강)',kr:'개',rule:'RR=혀떨기'},
+    {sp:'pero',read:'페로(약)',kr:'하지만',rule:'R=부드럽게'},
+    {sp:'llamo',read:'야모',kr:'나는~불린다',rule:'LL=야'},
+    {sp:'cena',read:'쎄나',kr:'저녁식사',rule:'C+e=씨'},
+    {sp:'cinco',read:'씽코',kr:'5',rule:'C+in=씽'},
+    {sp:'cerveza',read:'세르베사',kr:'맥주',rule:'C+e=세'},
+    {sp:'España',read:'에스파냐',kr:'스페인',rule:'Ñ=냐'},
+    {sp:'gracias',read:'그라시아스',kr:'감사해요',rule:'G+r=그'},
+    {sp:'Buenos días',read:'부에노스 디아스',kr:'좋은 아침',rule:'B=부'},
+  ];
+  const grid=document.createElement('div');
+  grid.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:5px;';
+  words.forEach(w=>{
+    const card=document.createElement('div');
+    card.style.cssText='background:#FAF5FF;border-radius:10px;padding:7px 9px;cursor:pointer;border:1.5px solid #EDE9FE;';
+    card.innerHTML='<div style="font-size:14px;font-weight:800;color:var(--purple);">'+w.sp+'</div>'
+      +'<div style="font-size:11px;color:var(--pink);font-weight:700;">'+w.read+'</div>'
+      +'<div style="font-size:10px;color:var(--text);font-weight:700;">'+w.kr+'</div>'
+      +'<div style="font-size:9px;color:var(--muted);">'+w.rule+'</div>';
+    card.onclick=()=>{ speakChar(w.sp, 'es-ES'); };
+    grid.appendChild(card);
+  });
+  sec.appendChild(grid);
+  wrap.appendChild(sec);
 }
 function buildThaIntro(wrap){
   const sec=document.createElement('div'); sec.className='card';
   sec.innerHTML='<div style="font-size:12px;font-weight:800;color:var(--text);margin-bottom:.4rem;">🇹🇭 태국어 문자 & 성조</div>';
   const points=[{t:'자음 44개',d:'고자음(11)·중자음(9)·저자음(24). 등급에 따라 성조가 달라요!'},{t:'5가지 성조',d:'중성조·저성조·하강·고성조·상승. 성조 기호로 표시!'},{t:'모음 위치',d:'자음 위·아래·앞·뒤 사방에 붙어요!'},{t:'ครับ / ค่ะ',d:'남성 ครับ(크랍), 여성 ค่ะ(카). 문장 끝 공손 표현!'}];
   points.forEach(p=>{const d=document.createElement('div');d.style.cssText='display:flex;gap:8px;background:#FAF5FF;border-radius:9px;padding:6px 9px;margin-bottom:4px;';d.innerHTML='<div style="font-size:11px;font-weight:800;color:var(--purple);min-width:70px;line-height:1.3;">'+p.t+'</div><div style="font-size:11px;font-weight:700;color:var(--text);">'+p.d+'</div>';sec.appendChild(d);});
+  // 태국어 TTS 안내
+  const tTip=document.createElement('div');
+  tTip.style.cssText='background:#FEF3C7;border-radius:10px;padding:8px 11px;font-size:11px;font-weight:700;color:#92400E;margin-top:.5rem;';
+  tTip.innerHTML='💡 <strong>태국어 발음 안내:</strong> 크롬(Chrome) 브라우저에서 가장 잘 들려요. 소리가 안 나면 크롬으로 접속해보세요!';
+  sec.appendChild(tTip);
   wrap.appendChild(sec);
 }
 function buildThaPractice(wrap){
-  buildPracticeCards(wrap,'th-TH',[
-    {word:'กา',read:'까',rule:'ก(k)+า(아모음)',meaning:'까마귀'},
-    {word:'มา',read:'마',rule:'ม(m)+า(아)',meaning:'오다'},
-    {word:'น้ำ',read:'남',rule:'น+้า+ม(받침)',meaning:'물'},
-    {word:'ข้าว',read:'카오',rule:'ข+้า+ว(받침)',meaning:'밥'},
-    {word:'แมว',read:'매우',rule:'แ(애모음)+ม+ว',meaning:'고양이'},
-    {word:'ดี',read:'디',rule:'ด(d)+ี(이장모음)',meaning:'좋다'},
-    {word:'สวัสดี',read:'사와디',rule:'ส+ว+ั+ส+ด+ี',meaning:'안녕하세요'},
-  ]);
+  const sec=document.createElement('div'); sec.className='card';
+  sec.innerHTML='<div style="font-size:12px;font-weight:800;color:var(--text);margin-bottom:.3rem;">✏️ 단어 읽기 연습</div>'
+    +'<div style="font-size:10px;color:var(--muted);font-weight:700;margin-bottom:.5rem;">탭하면 발음! 태국어 단어를 소리로 익혀요.</div>';
+  const words=[
+    {th:'กา',read:'까',kr:'까마귀',tip:'ก+า'},
+    {th:'มา',read:'마',kr:'오다',tip:'ม+า'},
+    {th:'น้ำ',read:'남',kr:'물',tip:'น+้า+ม'},
+    {th:'ข้าว',read:'카오',kr:'밥',tip:'ข+้า+ว'},
+    {th:'แมว',read:'매우',kr:'고양이',tip:'แ+ม+ว'},
+    {th:'ดี',read:'디',kr:'좋다',tip:'ด+ี'},
+    {th:'ไป',read:'빠이',kr:'가다',tip:'ไ+ป'},
+    {th:'กิน',read:'낀',kr:'먹다',tip:'ก+ิ+น'},
+    {th:'สวย',read:'수어이',kr:'예쁘다',tip:'ส+ว+ย'},
+    {th:'ใหญ่',read:'야이',kr:'크다',tip:'ใ+ห+ญ'},
+    {th:'อร่อย',read:'아로이',kr:'맛있다',tip:'อ+ร+่+อ+ย'},
+    {th:'สวัสดี',read:'사와디',kr:'안녕하세요',tip:'복합단어'},
+    {th:'ขอบคุณ',read:'콥쿤',kr:'감사해요',tip:'ข+อ+บ+ค+ุ+ณ'},
+    {th:'ไม่เป็นไร',read:'마이뻔라이',kr:'괜찮아요',tip:'긴 단어'},
+    {th:'เท่าไร',read:'타오라이',kr:'얼마예요',tip:'เ+ท+่า+ไ+ร'},
+    {th:'ห้องน้ำ',read:'헝남',kr:'화장실',tip:'ห้อง+น้ำ'},
+  ];
+  const grid=document.createElement('div');
+  grid.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:5px;';
+  words.forEach(w=>{
+    const card=document.createElement('div');
+    card.style.cssText='background:#FAF5FF;border-radius:10px;padding:7px 9px;cursor:pointer;border:1.5px solid #EDE9FE;';
+    card.innerHTML='<div style="font-size:18px;font-weight:800;color:var(--purple);">'+w.th+'</div>'
+      +'<div style="font-size:11px;color:var(--pink);font-weight:700;">'+w.read+'</div>'
+      +'<div style="font-size:10px;color:var(--text);font-weight:700;">'+w.kr+'</div>'
+      +'<div style="font-size:9px;color:var(--muted);">'+w.tip+'</div>';
+    card.onclick=()=>{ speakChar(w.th, 'th-TH'); };
+    grid.appendChild(card);
+  });
+  sec.appendChild(grid);
+  wrap.appendChild(sec);
 }
 function buildItaRules(wrap){
   const rules=[{char:'C+e/i',desc:'"치/체" Ciao=챠오'},{char:'C+a/o/u',desc:'"카/코/쿠" Casa=카사'},{char:'CH+e/i',desc:'"케/키" Che=케(무엇)'},{char:'G+e/i',desc:'"지/제" Gelato=젤라토'},{char:'GH+e/i',desc:'"게/기" Spaghetti=스파게티'},{char:'SC+e/i',desc:'"쉬/쉐" Sci=쉬(스키)'},{char:'GLI',desc:'"리" Figlio=필리오'},{char:'GN',desc:'"냐/뇨" Gnocchi=뇨키'},{char:'H',desc:'항상 묵음! Hotel=오텔'}];
@@ -1852,16 +1955,43 @@ function buildItaRules(wrap){
   wrap.appendChild(sec);
 }
 function buildItaPractice(wrap){
-  buildPracticeCards(wrap,'it-IT',[
-    {word:'ciao',read:'챠오',rule:'C+ia(c+i=ch소리)',meaning:'안녕'},
-    {word:'gelato',read:'젤라토',rule:'G+e="제"',meaning:'아이스크림'},
-    {word:'pizza',read:'피짜',rule:'ZZ="짜"',meaning:'피자'},
-    {word:'spaghetti',read:'스파게티',rule:'GH+e="게"',meaning:'스파게티'},
-    {word:'grazie',read:'그라찌에',rule:'Z="츠/즈"',meaning:'감사해요'},
-    {word:'figlio',read:'필리오',rule:'GLI="리"',meaning:'아들'},
-    {word:'gnocchi',read:'뇨키',rule:'GN="뇨"',meaning:'뇨키'},
-    {word:'chiesa',read:'키에사',rule:'CH+ie="키에"',meaning:'교회'},
-  ]);
+  const sec=document.createElement('div'); sec.className='card';
+  sec.innerHTML='<div style="font-size:12px;font-weight:800;color:var(--text);margin-bottom:.3rem;">✏️ 단어 읽기 연습</div>'
+    +'<div style="font-size:10px;color:var(--muted);font-weight:700;margin-bottom:.5rem;">탭하면 발음! 규칙을 적용해서 읽어보세요.</div>';
+  const words=[
+    {it:'ciao',read:'챠오',kr:'안녕',rule:'C+i=치'},
+    {it:'cena',read:'체나',kr:'저녁',rule:'C+e=체'},
+    {it:'casa',read:'카사',kr:'집',rule:'C+a=카'},
+    {it:'gelato',read:'젤라토',kr:'아이스크림',rule:'G+e=제'},
+    {it:'gatto',read:'가토',kr:'고양이',rule:'G+a=가'},
+    {it:'che',read:'케',kr:'무엇',rule:'CH+e=케'},
+    {it:'chiave',read:'키아베',kr:'열쇠',rule:'CH+i=키'},
+    {it:'spaghetti',read:'스파게티',kr:'스파게티',rule:'GH+e=게'},
+    {it:'scena',read:'쉐나',kr:'장면',rule:'SC+e=쉐'},
+    {it:'sci',read:'쉬',kr:'스키',rule:'SC+i=쉬'},
+    {it:'figlio',read:'필리오',kr:'아들',rule:'GLI=리'},
+    {it:'gnocchi',read:'뇨키',kr:'뇨키',rule:'GN=뇨'},
+    {it:'lasagna',read:'라자냐',kr:'라자냐',rule:'GN=냐'},
+    {it:'pizza',read:'피짜',kr:'피자',rule:'ZZ=짜'},
+    {it:'grazie',read:'그라찌에',kr:'감사해요',rule:'Z=츠/즈'},
+    {it:'arrivederci',read:'아리베데르치',kr:'안녕히',rule:'C+i=치'},
+    {it:'buongiorno',read:'부온조르노',kr:'안녕(낮)',rule:'G+io=조'},
+    {it:'prego',read:'프레고',kr:'천만에요',rule:'G+o=고'},
+  ];
+  const grid=document.createElement('div');
+  grid.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:5px;';
+  words.forEach(w=>{
+    const card=document.createElement('div');
+    card.style.cssText='background:#FAF5FF;border-radius:10px;padding:7px 9px;cursor:pointer;border:1.5px solid #EDE9FE;';
+    card.innerHTML='<div style="font-size:14px;font-weight:800;color:var(--purple);">'+w.it+'</div>'
+      +'<div style="font-size:11px;color:var(--pink);font-weight:700;">'+w.read+'</div>'
+      +'<div style="font-size:10px;color:var(--text);font-weight:700;">'+w.kr+'</div>'
+      +'<div style="font-size:9px;color:var(--muted);">'+w.rule+'</div>';
+    card.onclick=()=>{ speakChar(w.it, 'it-IT'); };
+    grid.appendChild(card);
+  });
+  sec.appendChild(grid);
+  wrap.appendChild(sec);
 }
 
 // ════════════════════════════════════════════
