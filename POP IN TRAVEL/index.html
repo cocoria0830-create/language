@@ -436,14 +436,186 @@ function renderHome(){
   wrap.appendChild(changeLangBtn);
 }
 
+
+// ════════════════════════════════════════════
+//  레벨 테스트
+// ════════════════════════════════════════════
+const LEVEL_TEST = {
+  eng:[
+    {q:'"사과"는 영어로?',opts:['Orange','Apple','Mango','Banana'],ans:1,lv:1,ex:'Apple이 사과예요! 🍎'},
+    {q:'"Thank you."에 어울리는 대답은?',opts:['Sorry.','Goodbye.','You are welcome.','Please.'],ans:2,lv:1,ex:'You are welcome. = 천만에요! 😊'},
+    {q:'"She likes coffee every morning."의 뜻은?',opts:['그녀는 아침마다 커피를 마시지 않는다.','그녀는 매일 아침 커피를 좋아한다.','그녀는 가끔 커피를 좋아한다.','그녀는 커피를 배우고 싶다.'],ans:1,lv:2,ex:'She likes coffee every morning ☕'},
+    {q:'"Can you help me?"는?',opts:['저를 도와주실 수 있나요?','도와주세요 안됩니다.','당신은 도움이 필요한가요?','저는 당신을 도울 수 있어요.'],ans:0,lv:2,ex:'Can you ~? = ~해줄 수 있나요? 🙏'},
+    {q:'"수하물을 잃어버렸어요"를 영어로?',opts:['I lost my baggage.','My baggage is losing.','I am lost the baggage.','Baggage is I lost.'],ans:0,lv:3,ex:'I lost my baggage. ✈️'},
+    {q:'"I would rather stay home."의 뜻은?',opts:['집에 있는 게 낫겠어.','집보다 밖이 좋아.','집에 못 가.','밖에 나가기 싫어.'],ans:0,lv:4,ex:'I would rather A = A가 낫다 = A가 낫다 🏠'},
+    {q:'"It is not rocket science."의 의미는?',opts:['그건 로켓 과학이야.','그건 어렵지 않아.','그건 매우 복잡해.','그건 과학적이지 않아.'],ans:1,lv:5,ex:'로켓 과학처럼 어렵지 않다 = 별거 아니야! 🚀'},
+    {q:'"She has a way with words."의 뜻은?',opts:['그녀는 말이 많다.','그녀는 언어 능력이 뛰어나다.','그녀는 외국어를 잘한다.','그녀는 말을 잘 안 한다.'],ans:1,lv:6,ex:'have a way with words = 말재주가 있다 ✍️'},
+  ],
+  jpn:[
+    {q:'다음 중 일본어 히라가나는?',opts:['A B C','あ い う','1 2 3','가 나 다'],ans:1,lv:1,ex:'あ い う가 히라가나예요! ⭐'},
+    {q:'"ありがとう"의 뜻은?',opts:['미안해요','안녕히','감사해요','잠깐만요'],ans:2,lv:1,ex:'ありがとう(아리가토)는 감사해요! 💜'},
+    {q:'"これは いくら ですか？"의 뜻은?',opts:['이것은 뭐예요?','이것은 어디?','이것은 얼마예요?','이것은 누구 거?'],ans:2,lv:2,ex:'いくら=얼마! 쇼핑 필수 🛍️'},
+    {q:'"사진 찍어도 될까요?"를 일본어로?',opts:['しゃしんをとってもいいですか？','しゃしんがほしいです。','しゃしんをみてください。','しゃしんはどこですか？'],ans:0,lv:3,ex:'〜てもいいですか？ = ~해도 될까요? 📸'},
+    {q:'"彼女は来るかもしれない"의 뜻은?',opts:['그녀는 반드시 온다.','그녀는 오지 않는다.','그녀는 올지도 모른다.','그녀는 오고 싶어한다.'],ans:2,lv:5,ex:'かもしれない = ~일지도 모른다 🤔'},
+    {q:'"忸怩たる思いだ."의 뜻은?',opts:['기쁜 마음이다.','부끄러운 마음이다.','슬픈 마음이다.','화가 나는 마음이다.'],ans:1,lv:6,ex:'忸怩 = 부끄럽다/수치스럽다. 고급 표현! 😳'},
+  ],
+  chn:[
+    {q:'"你好"는 무슨 뜻이에요?',opts:['감사해요','안녕하세요','미안해요','잘 가요'],ans:1,lv:1,ex:'你好(니 하오)! 중국어 기본 인사 🌟'},
+    {q:'"多少钱？"의 뜻은?',opts:['어디 있어요?','얼마예요?','뭐예요?','맛있어요?'],ans:1,lv:1,ex:'多少钱(뚜어샤오 치엔)? = 얼마예요? 🛍️'},
+    {q:'"我想吃火锅。"의 뜻은?',opts:['훠궈를 먹었어요.','훠궈가 싫어요.','훠궈를 먹고 싶어요.','훠궈를 만들어요.'],ans:2,lv:2,ex:'想=하고 싶다, 吃=먹다 🍲'},
+    {q:'"请说慢一点"은 언제 쓰나요?',opts:['빠르게 말해달라고','천천히 말해달라고','크게 말해달라고','조용히 말해달라고'],ans:1,lv:3,ex:'慢=천천히, 请=부탁드려요 🐢'},
+    {q:'"虽然~但是~"는 어떤 표현?',opts:['시간 표현','조건 표현','비록~이지만~ 양보 표현','비교 표현'],ans:2,lv:5,ex:'虽然A但是B = 비록 A이지만 B 🔄'},
+    {q:'"缘分"의 뜻은?',opts:['돈','운명적 인연','행운','사랑'],ans:1,lv:6,ex:'缘分(위엔펀) = 인연/운명적 만남 🔴'},
+  ],
+  spa:[
+    {q:'스페인어 "H"는 어떻게 발음하나요?',opts:['항상 크게','항상 묵음','상황에 따라','영어 h처럼'],ans:1,lv:1,ex:'H는 항상 묵음! Hola=올라 🇪🇸'},
+    {q:'"Gracias"는 무슨 뜻?',opts:['안녕하세요','미안해요','감사해요','안녕히 가세요'],ans:2,lv:1,ex:'Gracias(그라시아스) = 감사해요! 💜'},
+    {q:'"¿Dónde está el baño?"의 뜻은?',opts:['화장실이 어디?','식당이 어디?','출구가 어디?','호텔이 어디?'],ans:0,lv:2,ex:'Dónde=어디, baño=화장실 🚻'},
+    {q:'스페인어 형용사 위치는?',opts:['명사 앞','명사 뒤','동사 앞','문장 끝'],ans:1,lv:3,ex:'un vestido bonito = 예쁜 드레스 (드레스+예쁜) 👗'},
+    {q:'"llevar+시간+현재분사"의 의미는?',opts:['~할 것이다','~한 지 얼마가 됐다','~했었다','~하고 싶다'],ans:1,lv:5,ex:'Llevo 3 anos estudiando = 3년째 공부하고 있다 ⏱️'},
+    {q:'"sobremesa"의 뜻은?',opts:['아침 식사','식후 테이블 담소','점심 메뉴','카페 음료'],ans:1,lv:6,ex:'식사 후 테이블에서 나누는 담소. 스페인 문화! ☕'},
+  ],
+  tha:[
+    {q:'태국어 정중 어미: 남성/여성은?',opts:['남성: ค่ะ, 여성: ครับ','남성: ครับ, 여성: ค่ะ','둘 다 같다','없다'],ans:1,lv:1,ex:'남성 ครับ(크랍), 여성 ค่ะ(카)! 🙏'},
+    {q:'"อร่อย"의 뜻은?',opts:['맵다','맛있다','덥다','싸다'],ans:1,lv:1,ex:'อร่อย(아로이) = 맛있다! 🍜'},
+    {q:'"ห้องน้ำอยู่ที่ไหน"의 뜻은?',opts:['화장실이 어디?','식당이 어디?','출구가 어디?','호텔이 어디?'],ans:0,lv:2,ex:'ห้องน้ำ=화장실, ที่ไหน=어디 🚻'},
+    {q:'태국어 형용사 위치는?',opts:['명사 앞','명사 뒤','동사 앞','문장 끝'],ans:1,lv:3,ex:'ชุดสวย = 예쁜 드레스 (옷+예쁜) 👗'},
+    {q:'"กำลัง+동사+อยู่"는?',opts:['과거형','미래형','진행형','완료형'],ans:2,lv:5,ex:'กำลัง~อยู่ = ~하고 있다 (진행형) 🔄'},
+    {q:'"เกรงใจ"의 뜻은?',opts:['화가 나다','폐 끼치기 싫은 마음','배고프다','피곤하다'],ans:1,lv:6,ex:'태국 사회의 핵심 감정! 배려와 폐 끼치기 싫음 🌸'},
+  ],
+  ita:[
+    {q:'"Ciao"는 어떻게 읽나요?',opts:['키아오','씨아오','챠오','치아오'],ans:2,lv:1,ex:'Ciao(챠오)! C+i = ch소리 🌟'},
+    {q:'"Grazie"는 무슨 뜻?',opts:['안녕하세요','미안해요','감사해요','안녕히 가세요'],ans:2,lv:1,ex:'Grazie(그라찌에) = 감사해요! 💜'},
+    {q:'"Dove e il bagno?"의 뜻은?',opts:['화장실이 어디?','식당이 어디?','출구가 어디?','호텔이 어디?'],ans:0,lv:2,ex:'Dove=어디, bagno=화장실 🚻'},
+    {q:'이탈리아어 형용사 위치는?',opts:['명사 앞','명사 뒤 (대부분)','동사 앞','문장 끝'],ans:1,lv:3,ex:'un vestito bello = 예쁜 드레스 (드레스+예쁜) 👗'},
+    {q:'"nonostante + 접속법"의 뜻은?',opts:['그래서','~에도 불구하고','~이기 때문에','~할 때'],ans:1,lv:5,ex:'nonostante fosse stanco = 피곤했음에도 💪'},
+    {q:'"abbiocco"의 뜻은?',opts:['아침 피로','식후 졸음','밤새 피로','운동 후 피로'],ans:1,lv:6,ex:'식사 후 나른하게 졸린 그 느낌! 이탈리아만의 단어 😴'},
+  ],
+};
+
+const LEVEL_NAMES = ['','🌱 씨앗','🌿 새싹','🌸 꽃봉오리','🌺 개화','🔥 파워','💎 다이아','🦅 이글','👑 크라운','🌏 네이티브'];
+
+function startLevelTest(lang){
+  const wrap = document.getElementById('p-home');
+  wrap.innerHTML = '';
+  const questions = LEVEL_TEST[lang] || LEVEL_TEST.eng;
+  let qIdx = 0, score = 0, reachedLv = 1;
+
+  const hdr = document.createElement('div');
+  hdr.className = 'home-header';
+  hdr.innerHTML = `<div class="home-day">레벨 테스트</div><div class="home-title">내 실력을 확인해봐요! 🎯</div><div class="home-streak">${LANG_CFG[lang].flag} ${LANG_CFG[lang].name}</div>`;
+  wrap.appendChild(hdr);
+
+  const progRow = document.createElement('div');
+  progRow.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:.8rem;';
+  const pb=document.createElement('div'); pb.className='prog-bar';
+  const pf=document.createElement('div'); pf.className='prog-fill prog-fill-purple'; pf.id='lt-prog-fill';
+  pb.appendChild(pf);
+  const pt=document.createElement('div'); pt.id='lt-prog-txt'; pt.style.cssText='font-size:11px;font-weight:800;color:var(--muted);white-space:nowrap;';
+  progRow.appendChild(pb); progRow.appendChild(pt);
+  wrap.appendChild(progRow);
+
+  const qCard = document.createElement('div'); qCard.id='lt-q-card';
+  wrap.appendChild(qCard);
+
+  function renderQ(){
+    const q=questions[qIdx];
+    pf.style.width=((qIdx+1)/questions.length*100)+'%';
+    pt.innerText=(qIdx+1)+'/'+questions.length;
+    qCard.innerHTML=`
+      <div class="card" style="margin-bottom:.7rem;">
+        <div style="font-size:10px;font-weight:800;color:var(--purple);background:#FAF5FF;display:inline-block;padding:3px 9px;border-radius:20px;margin-bottom:.5rem;">레벨 ${q.lv} 문제</div>
+        <div style="font-size:14px;font-weight:800;color:var(--text);line-height:1.5;margin-bottom:.7rem;">${q.q}</div>
+        <div id="lt-opts" style="display:flex;flex-direction:column;gap:7px;"></div>
+        <div id="lt-feedback" style="display:none;border-radius:10px;padding:8px 11px;margin-top:.6rem;font-size:12px;font-weight:700;line-height:1.5;"></div>
+      </div>
+      <button class="pill-btn pill-mint" id="lt-next-btn" disabled onclick="ltNext()" style="font-size:15px;padding:11px;">다음 →</button>
+    `;
+    const optsDiv = document.getElementById('lt-opts');
+    q.opts.forEach((opt,i)=>{
+      const btn=document.createElement('button');
+      btn.style.cssText='padding:10px 12px;background:white;border:2.5px solid #EDE9FE;border-radius:12px;font-family:Nunito,sans-serif;font-size:13px;font-weight:700;color:var(--text);cursor:pointer;text-align:left;transition:all .15s;';
+      btn.innerText=opt;
+      btn.onclick=()=>checkLT(i,q,btn);
+      optsDiv.appendChild(btn);
+    });
+  }
+
+  window.checkLT=function(chosen,q,btn){
+    const opts=document.getElementById('lt-opts').querySelectorAll('button');
+    opts.forEach((b,i)=>{
+      b.disabled=true;
+      if(i===q.ans) b.style.cssText=b.style.cssText+'background:#D1FAE5;border-color:#10B981;color:#065F46;';
+      if(i===chosen&&chosen!==q.ans) b.style.cssText=b.style.cssText+'background:#FEE2E2;border-color:#EF4444;color:#991B1B;';
+    });
+    const ok=chosen===q.ans;
+    if(ok){score++;reachedLv=Math.max(reachedLv,q.lv);}
+    const fb=document.getElementById('lt-feedback');
+    fb.style.display='block';
+    fb.style.background=ok?'#D1FAE5':'#FEE2E2';
+    fb.style.color=ok?'#065F46':'#991B1B';
+    fb.innerHTML=(ok?'🎉 정답이에요! ':'💜 아쉽지만 괜찮아요! ')+q.ex;
+    const nextBtn=document.getElementById('lt-next-btn'); if(nextBtn) nextBtn.disabled=false;
+    if(qIdx===questions.length-1 && nextBtn) nextBtn.innerText='결과 보기 🎊';
+  };
+
+  window.ltNext=function(){
+    qIdx++;
+    if(qIdx>=questions.length) showLTResult();
+    else renderQ();
+  };
+
+  function showLTResult(){
+    const finalLv = Math.min(reachedLv + (score >= questions.length*0.7 ? 1 : 0), 6);
+    appState.cardLevel = finalLv;
+    appState.lang = lang;
+    saveState();
+    qCard.innerHTML='';
+    const resultDiv=document.createElement('div');
+    resultDiv.style.cssText='text-align:center;padding:.5rem 0;animation:fadeIn .4s ease;';
+    resultDiv.innerHTML=`
+      <div style="font-size:52px;margin-bottom:6px;">${LEVEL_NAMES[finalLv].split(' ')[0]}</div>
+      <div style="font-family:'Fredoka One',cursive;font-size:22px;color:var(--text);margin-bottom:3px;">${LEVEL_NAMES[finalLv]} 레벨!</div>
+      <div style="background:linear-gradient(135deg,var(--pink),var(--purple));color:white;font-family:'Fredoka One',cursive;font-size:13px;padding:5px 18px;border-radius:30px;display:inline-block;margin:5px 0 10px;">${LANG_CFG[lang].flag} ${LANG_CFG[lang].name} · 레벨 ${finalLv}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:.8rem;">
+        <div style="background:white;border-radius:13px;padding:8px;border:2px solid #EDE9FE;text-align:center;"><div style="font-family:'Fredoka One',cursive;font-size:20px;color:var(--purple);">${score}</div><div style="font-size:10px;font-weight:800;color:var(--muted);">정답</div></div>
+        <div style="background:white;border-radius:13px;padding:8px;border:2px solid #EDE9FE;text-align:center;"><div style="font-family:'Fredoka One',cursive;font-size:20px;color:var(--purple);">${questions.length}</div><div style="font-size:10px;font-weight:800;color:var(--muted);">총 문제</div></div>
+      </div>
+    `;
+    const startBtn=document.createElement('button');
+    startBtn.className='pill-btn pill-sun';
+    startBtn.innerText='레벨 '+finalLv+' 카드로 학습 시작! 🚀';
+    startBtn.onclick=()=>{ renderHome(); };
+    resultDiv.appendChild(startBtn);
+
+    // 다른 레벨 선택
+    const altDiv=document.createElement('div');
+    altDiv.style.cssText='margin-top:.6rem;';
+    altDiv.innerHTML='<div style="font-size:11px;font-weight:800;color:var(--muted);margin-bottom:5px;text-align:center;">다른 레벨로 시작하고 싶으면 탭하세요</div><div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:center;">';
+    for(let i=1;i<=6;i++){
+      const lbtn=document.createElement('button');
+      lbtn.style.cssText=`padding:5px 12px;border:2px solid ${i===finalLv?'var(--purple)':'#EDE9FE'};background:${i===finalLv?'var(--purple)':'white'};color:${i===finalLv?'white':'var(--text)'};border-radius:20px;font-family:Nunito,sans-serif;font-size:11px;font-weight:800;cursor:pointer;`;
+      lbtn.innerText=LEVEL_NAMES[i];
+      lbtn.onclick=()=>{appState.cardLevel=i;saveState();renderHome();};
+      altDiv.appendChild(lbtn);
+    }
+    resultDiv.appendChild(altDiv);
+    wrap.appendChild(resultDiv);
+    progRow.remove();
+  }
+
+  renderQ();
+}
+
 function confirmLang(){
   const key = window._selLangKey ? window._selLangKey() : null;
   if(!key) return;
+  // 레벨 테스트로 연결!
   appState.lang = key;
-  appState.langCfg = LANG_CFG[key];
   saveState();
-  renderHome();
+  startLevelTest(key);
 }
+
 
 // ════════════════════════════════════════════
 //  단어 카드 렌더링
@@ -1261,7 +1433,7 @@ function simGenQR(){
     hotel:{영어:["Yes, I have a reservation.","Is breakfast included?","What's the Wi-Fi password?"],일본어:["予約しています。","朝食は含まれていますか？"],중국어:["我预订了房间。","早餐包含吗？"],스페인어:["Tengo reserva.","¿Está incluido el desayuno?"],태국어:["ฉันจองห้องไว้แล้วค่ะ","รวมอาหารเช้าไหมคะ?"],이탈리아어:["Ho una prenotazione.","La colazione è inclusa?"]},
     restaurant:{영어:["Table for two, please.","What do you recommend?","Can I get the bill?"],일본어:["2名です。","おすすめは？","お会計をお願いします。"],중국어:["两位。","有什么推荐吗？","请结账。"],스페인어:["Mesa para dos.","¿Qué recomienda?","La cuenta, por favor."],태국어:["ขอโต๊ะสำหรับสองคนค่ะ","มีอะไรแนะนำบ้างคะ?","ขอบิลด้วยค่ะ"],이탈리아어:["Un tavolo per due.","Cosa consiglia?","Il conto, per favore."]},
     shopping:{영어:["I'm looking for a jacket.","Do you have this in medium?","Can I get a discount?"],일본어:["ジャケットを探しています。","Mサイズはありますか？"],중국어:["我在找夹克。","有中码的吗？"],스페인어:["Busco una chaqueta.","¿Tienen talla mediana?"],태국어:["ฉันหาแจ็คเก็ตค่ะ","มีไซส์ M ไหมคะ?"],이탈리아어:["Cerco una giacca.","L'avete in media?"]},
-    cafe:{영어:["An iced latte, please.","Can I make it oat milk?","What's popular here?"],일본어:["アイスラテをください。","オーツミルクにできますか？"],중국어:["请给我一杯冰拿铁。","可以换成燕麦奶吗？"],스페인어:["Un café con leche frío.","¿Puede ser leche de avena?"],태국어:["ขอกาแฟลาเต้เย็นค่ะ","ขอเปลี่ยนเป็นนมโอ๊ตได้ไหมคะ?"],이탈리아어:["Un caffè latte freddo.","Può farlo con latte d'avena?"]},
+    cafe:{영어:["An iced latte, please.","Can I make it oat milk?","What's popular here?"],일본어:["アイスラテをください。","オーツミルクにできますか？"],중국어:["请给我一杯冰拿铁。","可以换成燕麦奶吗？"],스페인어:["Un café con leche frío.","¿Puede ser leche de avena?"],태국어:["ขอกาแฟลาเต้เย็นค่ะ","ขอเปลี่ยนเป็นนมโอ๊ตได้ไหมคะ?"],이탈리아어:["Un caffè latte freddo.","Può farlo con latte di avena?"]},
     transport:{영어:["How do I get to the city center?","One ticket, please.","Do I need to transfer?"],일본어:["市内中心部への行き方を教えてください。","1枚ください。"],중국어:["怎么去市中心？","一张票。"],스페인어:["¿Cómo llego al centro?","Un billete, por favor."],태국어:["ไปใจกลางเมืองยังไงคะ?","ขอตั๋วหนึ่งใบค่ะ"],이탈리아어:["Come arrivo al centro?","Un biglietto, per favore."]}};
   const qrs=((qrSets[simSit]||{})[simLang])||[];
   const row=document.getElementById('sim-qr-row'); row.innerHTML='';
