@@ -1651,40 +1651,57 @@ function renderScript(){
 // 구글 번역 TTS (태국어 등 브라우저 미지원 언어 처리)
 const GTTS_LANGS = {'th-TH':'th','ja-JP':'ja','zh-CN':'zh-CN','es-ES':'es','it-IT':'it','en-US':'en'};
 
-// ── 전역 음성 캐시 ──
-let _voices = [];
-function _loadVoices(){
-  _voices = window.speechSynthesis ? speechSynthesis.getVoices() : [];
-}
-if(window.speechSynthesis){
-  _loadVoices();
-  speechSynthesis.addEventListener('voiceschanged', _loadVoices);
-}
+// ── TTS: 프록시(태국어) + Web Speech API(나머지) ──
+let _ttsAudio = null;
 
 function speakChar(text, lang){
-  if(!text || !window.speechSynthesis) return;
+  if(!text) return;
+  if(lang === 'th-TH'){
+    // 태국어: Vercel 프록시 → 구글 TTS
+    speakViaTTS(text, 'th');
+    return;
+  }
+  if(!window.speechSynthesis) return;
   speechSynthesis.cancel();
   const run = ()=>{
     const voices = speechSynthesis.getVoices();
     const lc = lang.toLowerCase().split('-')[0];
-    // 우선순위: 해당 언어 음성 → 없으면 lang만 지정
     const voice = voices.find(v=>v.lang.toLowerCase()===lang.toLowerCase())
       || voices.find(v=>v.lang.toLowerCase().startsWith(lc));
     const u = new SpeechSynthesisUtterance(text);
     u.lang = lang;
-    u.rate = lang==='th-TH'?0.7:0.75;
+    u.rate = 0.75;
     u.pitch = 1.0;
     if(voice) u.voice = voice;
     speechSynthesis.speak(u);
   };
-  if(speechSynthesis.getVoices().length>0) run();
-  else{ speechSynthesis.addEventListener('voiceschanged', run, {once:true}); setTimeout(run,800); }
+  if(speechSynthesis.getVoices().length > 0) run();
+  else { speechSynthesis.addEventListener('voiceschanged', run, {once:true}); setTimeout(run, 800); }
 }
 
-// speakGTTS는 speakChar로 통합 (하위 호환)
+function speakViaTTS(text, langCode){
+  // 이전 오디오 중지
+  if(_ttsAudio){ _ttsAudio.pause(); _ttsAudio = null; }
+  const url = '/api/tts?text=' + encodeURIComponent(text) + '&lang=' + langCode;
+  const audio = new Audio(url);
+  audio.volume = 1.0;
+  audio.play().catch(e=>{
+    console.warn('TTS 프록시 실패, Web Speech로 대체:', e);
+    // 폴백: Web Speech API
+    if(window.speechSynthesis){
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'th-TH'; u.rate = 0.7;
+      speechSynthesis.speak(u);
+    }
+  });
+  _ttsAudio = audio;
+}
+
+// 하위 호환
 function speakGTTS(text, langCode){
-  const bcp = langCode==='th'?'th-TH':langCode==='zh-CN'?'zh-CN':'th-TH';
-  speakChar(text, bcp);
+  if(langCode === 'th') speakViaTTS(text, 'th');
+  else speakChar(text, langCode === 'zh-CN' ? 'zh-CN' : langCode + '-' + langCode.toUpperCase());
 }
 
 // ── 공통: 읽기 연습 카드 빌더 ──
@@ -2094,27 +2111,86 @@ function buildSpaFullTable(wrap){
     '탭하면 발음! 같은 글자도 뒤에 오는 모음에 따라 달라져요.'
   );
 
+  // TTS는 단독 음절을 이상하게 읽으므로 실제 단어 사용
   const rows = [
     {init:'B/V', note:'b와 v는 같은 소리!',
-     cells:[{combo:'ba',kr:'바'},{combo:'be',kr:'베'},{combo:'bi',kr:'비'},{combo:'bo',kr:'보'},{combo:'bu',kr:'부'}]},
-    {init:'C', note:'e/i앞=s, 나머지=k',
-     cells:[{combo:'ca',kr:'카'},{combo:'ce',kr:'세',special:true},{combo:'ci',kr:'시',special:true},{combo:'co',kr:'코'},{combo:'cu',kr:'쿠'},{combo:'que',kr:'케',note:'QU+e'},{combo:'qui',kr:'키',note:'QU+i'}]},
-    {init:'G', note:'e/i앞=ㅎ, 나머지=g',
-     cells:[{combo:'ga',kr:'가'},{combo:'ge',kr:'헤',special:true},{combo:'gi',kr:'히',special:true},{combo:'go',kr:'고'},{combo:'gu',kr:'구'},{combo:'gue',kr:'게',note:'GU+e'},{combo:'gui',kr:'기',note:'GU+i'}]},
+     cells:[
+       {combo:'banco',show:'ba',kr:'바 (은행)'},
+       {combo:'beso',show:'be',kr:'베 (키스)'},
+       {combo:'bien',show:'bi',kr:'비 (잘)'},
+       {combo:'boca',show:'bo',kr:'보 (입)'},
+       {combo:'bueno',show:'bu',kr:'부 (좋은)'}
+     ]},
+    {init:'C', note:'e/i앞=s소리, 나머지=k소리',
+     cells:[
+       {combo:'casa',show:'ca',kr:'카 (집)'},
+       {combo:'cena',show:'ce',kr:'세 (저녁)',special:true},
+       {combo:'ciudad',show:'ci',kr:'시 (도시)',special:true},
+       {combo:'color',show:'co',kr:'코 (색깔)'},
+       {combo:'cuna',show:'cu',kr:'쿠 (요람)'},
+       {combo:'queso',show:'que',kr:'케 (치즈)',note:'QU+e'},
+       {combo:'quince',show:'qui',kr:'키 (15)',note:'QU+i'}
+     ]},
+    {init:'G', note:'e/i앞=ㅎ소리, 나머지=g소리',
+     cells:[
+       {combo:'gato',show:'ga',kr:'가 (고양이)'},
+       {combo:'gente',show:'ge',kr:'헤 (사람들)',special:true},
+       {combo:'gitano',show:'gi',kr:'히 (집시)',special:true},
+       {combo:'goma',show:'go',kr:'고 (고무)'},
+       {combo:'gusto',show:'gu',kr:'구 (취향)'},
+       {combo:'guerra',show:'gue',kr:'게 (전쟁)',note:'GU+e'},
+       {combo:'guía',show:'gui',kr:'기 (가이드)',note:'GU+i'}
+     ]},
     {init:'H', note:'항상 묵음!',
-     cells:[{combo:'ha',kr:'아(H묵음)',special:true},{combo:'he',kr:'에(H묵음)',special:true},{combo:'hi',kr:'이(H묵음)',special:true},{combo:'ho',kr:'오(H묵음)',special:true},{combo:'hu',kr:'우(H묵음)',special:true}]},
-    {init:'J', note:'항상 ㅎ 소리',
-     cells:[{combo:'ja',kr:'하',special:true},{combo:'je',kr:'헤',special:true},{combo:'ji',kr:'히',special:true},{combo:'jo',kr:'호',special:true},{combo:'ju',kr:'후',special:true}]},
-    {init:'LL', note:'야/여/요 소리',
-     cells:[{combo:'lla',kr:'야',special:true},{combo:'lle',kr:'예'},{combo:'llo',kr:'요'},{combo:'llu',kr:'유'}]},
-    {init:'Ñ', note:'냐/뇨 소리',
-     cells:[{combo:'ña',kr:'냐',special:true},{combo:'ñe',kr:'녜'},{combo:'ño',kr:'뇨'},{combo:'ñu',kr:'뉴'}]},
+     cells:[
+       {combo:'hablar',show:'ha',kr:'아 (말하다)',special:true},
+       {combo:'hermano',show:'he',kr:'에 (형제)',special:true},
+       {combo:'historia',show:'hi',kr:'이 (역사)',special:true},
+       {combo:'hola',show:'ho',kr:'오 (안녕)',special:true},
+       {combo:'humano',show:'hu',kr:'우 (인간)',special:true}
+     ]},
+    {init:'J', note:'항상 ㅎ소리',
+     cells:[
+       {combo:'jamón',show:'ja',kr:'하 (하몽)',special:true},
+       {combo:'jefe',show:'je',kr:'헤 (상사)',special:true},
+       {combo:'jinete',show:'ji',kr:'히 (기수)',special:true},
+       {combo:'joven',show:'jo',kr:'호 (젊은)',special:true},
+       {combo:'julio',show:'ju',kr:'후 (7월)',special:true}
+     ]},
+    {init:'LL', note:'야/여/요소리',
+     cells:[
+       {combo:'llama',show:'lla',kr:'야 (라마)',special:true},
+       {combo:'llevar',show:'lle',kr:'예 (가져가다)'},
+       {combo:'llover',show:'llo',kr:'요 (비오다)'},
+       {combo:'lluvia',show:'llu',kr:'유 (비)'}
+     ]},
+    {init:'Ñ', note:'냐/뇨소리',
+     cells:[
+       {combo:'España',show:'ña',kr:'냐 (스페인)',special:true},
+       {combo:'niñera',show:'ñe',kr:'녜 (유모)'},
+       {combo:'año',show:'ño',kr:'뇨 (해/년)'},
+       {combo:'ñu',show:'ñu',kr:'뉴 (누)'}
+     ]},
     {init:'R (약)', note:'단어 중간: 부드럽게',
-     cells:[{combo:'ra',kr:'라'},{combo:'re',kr:'레'},{combo:'ri',kr:'리'},{combo:'ro',kr:'로'},{combo:'ru',kr:'루'}]},
+     cells:[
+       {combo:'raro',show:'ra',kr:'라 (이상한)'},
+       {combo:'pero',show:'re',kr:'레 (하지만)'},
+       {combo:'río',show:'ri',kr:'리 (강)'},
+       {combo:'ropa',show:'ro',kr:'로 (옷)'},
+       {combo:'ruta',show:'ru',kr:'루 (경로)'}
+     ]},
     {init:'RR (강)', note:'혀 떨기!',
-     cells:[{combo:'rra',kr:'라(강)',special:true},{combo:'rre',kr:'레(강)',special:true},{combo:'rri',kr:'리(강)'},{combo:'rro',kr:'로(강)',special:true},{combo:'rru',kr:'루(강)'}]},
-    {init:'Z', note:'s 소리 (스페인)',
-     cells:[{combo:'za',kr:'사',special:true},{combo:'ze',kr:'세'},{combo:'zo',kr:'소'},{combo:'zu',kr:'수'}]},
+     cells:[
+       {combo:'barra',show:'rra',kr:'라(강) (막대)',special:true},
+       {combo:'perro',show:'rro',kr:'로(강) (개)',special:true},
+       {combo:'tierra',show:'rra',kr:'라(강) (땅)',special:true}
+     ]},
+    {init:'Z', note:'s소리 (스페인)',
+     cells:[
+       {combo:'zapato',show:'za',kr:'사 (신발)',special:true},
+       {combo:'zona',show:'zo',kr:'소 (지역)',special:true},
+       {combo:'zumo',show:'zu',kr:'수 (주스)',special:true}
+     ]},
   ];
 
   const table=document.createElement('table');
@@ -2270,27 +2346,49 @@ function buildItaFullTable(wrap){
   );
 
   const vowels=['a','e','i','o','u'];
+  // 실제 단어로 발음 (단독 음절 TTS 불안정)
+  // sound: {show:표시텍스트, speak:TTS단어, kr:한국어설명, special:특별발음}
   const rows=[
-    {init:'b',  note:'b',       sounds:{a:'ba',e:'be',i:'bi',o:'bo',u:'bu'}},
-    {init:'c',  note:'k/ch',    sounds:{a:'ca(카)',e:'ce(체)',i:'ci(치)',o:'co(코)',u:'cu(쿠)'},special:['e','i']},
-    {init:'ch', note:'k (e/i앞)',sounds:{e:'che(케)',i:'chi(키)'},special:['e','i']},
-    {init:'d',  note:'d',       sounds:{a:'da',e:'de',i:'di',o:'do',u:'du'}},
-    {init:'f',  note:'f',       sounds:{a:'fa',e:'fe',i:'fi',o:'fo',u:'fu'}},
-    {init:'g',  note:'g/j',     sounds:{a:'ga(가)',e:'ge(제)',i:'gi(지)',o:'go(고)',u:'gu(구)'},special:['e','i']},
-    {init:'gh', note:'g (e/i앞)',sounds:{e:'ghe(게)',i:'ghi(기)'},special:['e','i']},
-    {init:'gl', note:'리 소리',  sounds:{i:'gli(리)'},special:['i']},
-    {init:'gn', note:'냐/뇨',    sounds:{a:'gna(냐)',e:'gne(녜)',i:'gni(뇨)',o:'gno(뇨)',u:'gnu(뉴)'}},
-    {init:'h',  note:'묵음',    sounds:{a:'ha(아)',e:'he(에)',i:'hi(이)',o:'ho(오)',u:'hu(우)'},special:['a','e','i','o','u']},
-    {init:'l',  note:'l',       sounds:{a:'la',e:'le',i:'li',o:'lo',u:'lu'}},
-    {init:'m',  note:'m',       sounds:{a:'ma',e:'me',i:'mi',o:'mo',u:'mu'}},
-    {init:'n',  note:'n',       sounds:{a:'na',e:'ne',i:'ni',o:'no',u:'nu'}},
-    {init:'p',  note:'p',       sounds:{a:'pa',e:'pe',i:'pi',o:'po',u:'pu'}},
-    {init:'r',  note:'r',       sounds:{a:'ra',e:'re',i:'ri',o:'ro',u:'ru'}},
-    {init:'s',  note:'s/z',     sounds:{a:'sa',e:'se',i:'si',o:'so',u:'su'}},
-    {init:'sc', note:'sk/sh',   sounds:{a:'sca(스카)',e:'sce(쉐)',i:'sci(쉬)',o:'sco(스코)',u:'scu(스쿠)'},special:['e','i']},
-    {init:'t',  note:'t',       sounds:{a:'ta',e:'te',i:'ti',o:'to',u:'tu'}},
-    {init:'v',  note:'v',       sounds:{a:'va',e:'ve',i:'vi',o:'vo',u:'vu'}},
-    {init:'z',  note:'ts/dz',   sounds:{a:'za',e:'ze',i:'zi',o:'zo',u:'zu'}},
+    {init:'b', note:'b',
+     sounds:{a:{show:'ba',speak:'banca',kr:'바(은행)'},e:{show:'be',speak:'bene',kr:'베(잘)'},i:{show:'bi',speak:'bicchiere',kr:'비(잔)'},o:{show:'bo',speak:'botta',kr:'보(충격)'},u:{show:'bu',speak:'buono',kr:'부(좋은)'}}},
+    {init:'c', note:'k/ch',
+     sounds:{a:{show:'ca',speak:'casa',kr:'카(집)'},e:{show:'ce',speak:'cena',kr:'체(저녁)',special:true},i:{show:'ci',speak:'ciao',kr:'치(안녕)',special:true},o:{show:'co',speak:'colore',kr:'코(색)'},u:{show:'cu',speak:'cucina',kr:'쿠(부엌)'}},special:['e','i']},
+    {init:'ch', note:'k(e/i앞)',
+     sounds:{e:{show:'che',speak:'che',kr:'케(무엇)',special:true},i:{show:'chi',speak:'chiave',kr:'키(열쇠)',special:true}},special:['e','i']},
+    {init:'d', note:'d',
+     sounds:{a:{show:'da',speak:'dare',kr:'다(주다)'},e:{show:'de',speak:'dentro',kr:'데(안)'},i:{show:'di',speak:'dire',kr:'디(말하다)'},o:{show:'do',speak:'dove',kr:'도(어디)'},u:{show:'du',speak:'duomo',kr:'두(대성당)'}}},
+    {init:'f', note:'f',
+     sounds:{a:{show:'fa',speak:'fare',kr:'파(하다)'},e:{show:'fe',speak:'festa',kr:'페(축제)'},i:{show:'fi',speak:'figlio',kr:'필리(아들)'},o:{show:'fo',speak:'foglia',kr:'포(잎)'},u:{show:'fu',speak:'fuoco',kr:'푸(불)'}}},
+    {init:'g', note:'g/j',
+     sounds:{a:{show:'ga',speak:'gatto',kr:'가(고양이)'},e:{show:'ge',speak:'gelato',kr:'제(젤라토)',special:true},i:{show:'gi',speak:'giro',kr:'지(여행)',special:true},o:{show:'go',speak:'gonna',kr:'고(치마)'},u:{show:'gu',speak:'gusto',kr:'구(취향)'}},special:['e','i']},
+    {init:'gh', note:'g(e/i앞)',
+     sounds:{e:{show:'ghe',speak:'spaghetti',kr:'게(스파게티)',special:true},i:{show:'ghi',speak:'ghiaccio',kr:'기(얼음)',special:true}},special:['e','i']},
+    {init:'gl', note:'리소리',
+     sounds:{i:{show:'gli',speak:'figlio',kr:'리(아들)',special:true}},special:['i']},
+    {init:'gn', note:'냐/뇨',
+     sounds:{o:{show:'gno',speak:'gnocchi',kr:'뇨(뇨키)',special:true},a:{show:'gna',speak:'lasagna',kr:'냐(라자냐)',special:true}}},
+    {init:'h', note:'묵음',
+     sounds:{a:{show:'ha',speak:'hai',kr:'아이(너는가짐)',special:true},o:{show:'ho',speak:'ho',kr:'오(나는가짐)',special:true}},special:['a','e','i','o','u']},
+    {init:'l', note:'l',
+     sounds:{a:{show:'la',speak:'lago',kr:'라(호수)'},e:{show:'le',speak:'lezione',kr:'레(수업)'},i:{show:'li',speak:'libro',kr:'리(책)'},o:{show:'lo',speak:'lontano',kr:'로(먼)'},u:{show:'lu',speak:'luna',kr:'루(달)'}}},
+    {init:'m', note:'m',
+     sounds:{a:{show:'ma',speak:'mamma',kr:'마(엄마)'},e:{show:'me',speak:'metro',kr:'메(지하철)'},i:{show:'mi',speak:'Milano',kr:'미(밀라노)'},o:{show:'mo',speak:'momento',kr:'모(순간)'},u:{show:'mu',speak:'musica',kr:'무(음악)'}}},
+    {init:'n', note:'n',
+     sounds:{a:{show:'na',speak:'natura',kr:'나(자연)'},e:{show:'ne',speak:'nero',kr:'네(검은)'},i:{show:'ni',speak:'niente',kr:'니(아무것)'},o:{show:'no',speak:'notte',kr:'노(밤)'},u:{show:'nu',speak:'numero',kr:'누(숫자)'}}},
+    {init:'p', note:'p',
+     sounds:{a:{show:'pa',speak:'pane',kr:'파(빵)'},e:{show:'pe',speak:'pesce',kr:'페(생선)'},i:{show:'pi',speak:'pizza',kr:'피(피자)'},o:{show:'po',speak:'poco',kr:'포(조금)'},u:{show:'pu',speak:'punto',kr:'푸(점)'}}},
+    {init:'r', note:'r(굴리기)',
+     sounds:{a:{show:'ra',speak:'ragazzo',kr:'라(남자)'},e:{show:'re',speak:'bere',kr:'레(마시다)'},i:{show:'ri',speak:'ridere',kr:'리(웃다)'},o:{show:'ro',speak:'Roma',kr:'로(로마)'},u:{show:'ru',speak:'russo',kr:'루(러시아)'}}},
+    {init:'s', note:'s/z',
+     sounds:{a:{show:'sa',speak:'sale',kr:'사(소금)'},e:{show:'se',speak:'sera',kr:'세(저녁)'},i:{show:'si',speak:'signore',kr:'시(신사)'},o:{show:'so',speak:'sole',kr:'소(태양)'},u:{show:'su',speak:'subito',kr:'수(즉시)'}}},
+    {init:'sc', note:'sk/sh',
+     sounds:{a:{show:'sca',speak:'scala',kr:'스카(계단)'},e:{show:'sce',speak:'scena',kr:'쉐(장면)',special:true},i:{show:'sci',speak:'sci',kr:'쉬(스키)',special:true},o:{show:'sco',speak:'scuola',kr:'스코(학교)'},u:{show:'scu',speak:'scuro',kr:'스쿠(어두운)'}},special:['e','i']},
+    {init:'t', note:'t',
+     sounds:{a:{show:'ta',speak:'tavolo',kr:'타(테이블)'},e:{show:'te',speak:'teatro',kr:'테(극장)'},i:{show:'ti',speak:'tirare',kr:'티(당기다)'},o:{show:'to',speak:'tornare',kr:'토(돌아가다)'},u:{show:'tu',speak:'turismo',kr:'투(관광)'}}},
+    {init:'v', note:'v',
+     sounds:{a:{show:'va',speak:'vaso',kr:'바(꽃병)'},e:{show:'ve',speak:'vento',kr:'베(바람)'},i:{show:'vi',speak:'vino',kr:'비(와인)'},o:{show:'vo',speak:'voce',kr:'보(목소리)'},u:{show:'vu',speak:'vuoto',kr:'부(빈)'}}},
+    {init:'z', note:'ts/dz',
+     sounds:{a:{show:'za',speak:'zucchero',kr:'차(설탕)'},e:{show:'ze',speak:'zero',kr:'체(0)'},i:{show:'zi',speak:'zio',kr:'치(삼촌)'},o:{show:'zo',speak:'zona',kr:'조(지역)'},u:{show:'zu',speak:'zuppa',kr:'추(수프)'}}},
   ];
 
   const table=document.createElement('table');
@@ -2307,22 +2405,20 @@ function buildItaFullTable(wrap){
     tr.appendChild(makeCell('<b>'+row.init+'</b>','rowheader'));
     tr.appendChild(makeCell('<span style="font-size:9px;color:var(--muted);">'+row.note+'</span>','header'));
     vowels.forEach(v=>{
-      const sound=row.sounds[v];
-      if(sound){
-        const isSpecial=row.special&&row.special.includes(v);
+      const s=row.sounds[v];
+      if(s){
+        const isSpecial=s.special||false;
         const color=isSpecial?'var(--pink)':'var(--purple)';
         const bg=isSpecial?'#FFF5F9':'#FAF5FF';
-        const word=sound.split('(')[0];
-        const label=sound.includes('(')?sound:'';
         const td=makeCell(
-          '<div style="font-size:12px;font-weight:800;color:'+color+';background:'+bg+';border-radius:4px;padding:1px 3px;">'+word+'</div>'
-          +(isSpecial?'<div style="font-size:8px;color:'+color+';">⭐'+sound.replace(word,'').replace(/[()]/g,'')+'</div>':''),
-          'cell',()=>speakChar(word,'it-IT'),word
+          '<div style="font-size:12px;font-weight:800;color:'+color+';background:'+bg+';border-radius:4px;padding:1px 3px;">'+s.show+'</div>'
+          +'<div style="font-size:8px;color:var(--muted);">'+s.kr+'</div>',
+          'cell',()=>speakChar(s.speak,'it-IT'),s.show+':'+s.kr
         );
-        td.style.minWidth='45px';
+        td.style.minWidth='48px';
         tr.appendChild(td);
       } else {
-        const td=makeCell('','empty'); td.style.minWidth='45px';
+        const td=makeCell('','empty'); td.style.minWidth='48px';
         tr.appendChild(td);
       }
     });
