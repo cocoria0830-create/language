@@ -1544,30 +1544,35 @@ function escStr(s){return(s||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');}
 //  문자 & 발음 학습 페이지
 // ════════════════════════════════════════════
 const SCRIPT_SECTIONS = {
-  eng: null, // 영어는 문자 학습 불필요
+  eng: null,
   jpn:[
+    {label:'전체 발음표',build:buildJpnFullTable},
     {label:'히라가나',build:buildHiragana},
     {label:'가타카나',build:buildKatakana},
     {label:'발음 팁',build:buildJpnTips},
     {label:'읽기 연습',build:buildJpnPractice},
   ],
   chn:[
+    {label:'전체 발음표',build:buildChnFullTable},
     {label:'4가지 성조',build:buildChnTones},
     {label:'성조 연습',build:buildChnToneQuiz},
     {label:'병음 읽기',build:buildChnPinyin},
     {label:'읽기 연습',build:buildChnPractice},
   ],
   spa:[
+    {label:'전체 발음표',build:buildSpaFullTable},
     {label:'발음 규칙',build:buildSpaRules},
     {label:'읽기 연습',build:buildSpaPractice},
   ],
   tha:[
+    {label:'전체 발음표',build:buildThaFullTable},
     {label:'자음표',build:buildThaConsonants},
     {label:'모음표',build:buildThaVowels},
     {label:'성조 연습',build:buildThaTones},
     {label:'읽기 연습',build:buildThaPractice},
   ],
   ita:[
+    {label:'전체 발음표',build:buildItaFullTable},
     {label:'발음 규칙',build:buildItaRules},
     {label:'읽기 연습',build:buildItaPractice},
   ],
@@ -1744,6 +1749,588 @@ function buildPracticeCards(wrap, bcp, items){
   prevB.onclick=()=>{ if(idx>0){idx--;render();} };
   nextB.onclick=()=>{ idx=idx<items.length-1?idx+1:0; render(); };
   render();
+}
+
+
+// ═══════════════════════════════════════════════════
+//  전체 발음표 함수들 (성모×운모 조합표)
+// ═══════════════════════════════════════════════════
+
+// ── 공통: 스크롤 가능한 표 컨테이너 ──
+function makeTableCard(title, subtitle){
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'margin-bottom:.7rem;';
+  const hd = document.createElement('div');
+  hd.className = 'card';
+  hd.style.paddingBottom = '.4rem';
+  hd.innerHTML = '<div style="font-size:12px;font-weight:800;color:var(--text);margin-bottom:2px;">'+title+'</div>'
+    + '<div style="font-size:10px;color:var(--muted);font-weight:700;">'+subtitle+'</div>';
+  const scroll = document.createElement('div');
+  scroll.style.cssText = 'overflow-x:auto;-webkit-overflow-scrolling:touch;';
+  hd.appendChild(scroll);
+  wrap.appendChild(hd);
+  return {wrap, scroll};
+}
+
+// ── 공통: 표 셀 생성 ──
+function makeCell(text, type, onclick, title){
+  const td = document.createElement('td');
+  td.style.cssText = 'padding:4px 3px;text-align:center;border:1px solid #EDE9FE;white-space:nowrap;min-width:32px;';
+  if(type==='header'){
+    td.style.cssText = 'padding:4px 3px;text-align:center;border:1px solid #EDE9FE;background:#FAF5FF;font-size:10px;font-weight:800;color:var(--purple);white-space:nowrap;min-width:32px;position:sticky;';
+  } else if(type==='rowheader'){
+    td.style.cssText = 'padding:4px 5px;text-align:center;border:1px solid #EDE9FE;background:#FAF5FF;font-size:10px;font-weight:800;color:var(--purple);white-space:nowrap;position:sticky;left:0;z-index:1;';
+  } else if(type==='cell' && onclick){
+    td.style.cssText += 'cursor:pointer;font-size:11px;font-weight:700;color:var(--text);';
+    td.addEventListener('click', onclick);
+    td.addEventListener('click', ()=>{
+      td.style.background='#EDE9FE';
+      setTimeout(()=>td.style.background='',300);
+    });
+  } else if(type==='empty'){
+    td.style.background = '#F9F9F9';
+    td.style.color = '#CCC';
+  }
+  if(title) td.title = title;
+  td.innerHTML = text || '';
+  return td;
+}
+
+// ════════════════════════════════════════
+//  🇨🇳 중국어 전체 발음표 (성모 × 운모)
+// ════════════════════════════════════════
+function buildChnFullTable(wrap){
+  // 실제 가능한 병음 조합 (한자가 존재하는 것만)
+  // 성모 (초성)
+  const initials = ['b','p','m','f','d','t','n','l','g','k','h','j','q','x','zh','ch','sh','r','z','c','s','y','w'];
+  // 운모 (모음) + 해당 한자 (TTS용)
+  const finals = [
+    {f:'a',hz:'啊'},{f:'o',hz:'哦'},{f:'e',hz:'鹅'},{f:'i',hz:'一'},{f:'u',hz:'无'},{f:'ü',hz:'鱼'},
+    {f:'ai',hz:'爱'},{f:'ei',hz:'飞'},{f:'ao',hz:'奥'},{f:'ou',hz:'偶'},
+    {f:'an',hz:'安'},{f:'en',hz:'恩'},{f:'ang',hz:'昂'},{f:'eng',hz:'哼'},
+    {f:'ia',hz:'呀'},{f:'iao',hz:'要'},{f:'ie',hz:'耶'},{f:'iu',hz:'由'},
+    {f:'ian',hz:'演'},{f:'in',hz:'因'},{f:'ing',hz:'应'},{f:'iang',hz:'让'},
+    {f:'ua',hz:'娃'},{f:'uo',hz:'我'},{f:'ui',hz:'为'},{f:'uan',hz:'弯'},
+    {f:'un',hz:'温'},{f:'uang',hz:'王'},{f:'ueng',hz:'翁'},
+  ];
+
+  // 실제 존재하는 병음 조합 (불규칙 제거)
+  // key: initial+final, value: {py:병음, hz:대표한자}
+  const validPinyin = {
+    'ba':{py:'bā',hz:'八'},'bo':{py:'bō',hz:'波'},'bi':{py:'bǐ',hz:'笔'},'bu':{py:'bù',hz:'不'},
+    'bai':{py:'bāi',hz:'掰'},'bei':{py:'běi',hz:'北'},'bao':{py:'bǎo',hz:'宝'},
+    'ban':{py:'bān',hz:'班'},'ben':{py:'běn',hz:'本'},'bang':{py:'bāng',hz:'帮'},'beng':{py:'béng',hz:'甭'},
+    'bian':{py:'biān',hz:'边'},'biao':{py:'biāo',hz:'标'},'bie':{py:'bié',hz:'别'},
+    'bin':{py:'bīn',hz:'宾'},'bing':{py:'bīng',hz:'冰'},
+    'pa':{py:'pā',hz:'趴'},'po':{py:'pò',hz:'破'},'pi':{py:'pí',hz:'皮'},'pu':{py:'pǔ',hz:'普'},
+    'pai':{py:'pái',hz:'牌'},'pei':{py:'pèi',hz:'配'},'pao':{py:'páo',hz:'袍'},'pou':{py:'pōu',hz:'剖'},
+    'pan':{py:'pán',hz:'盘'},'pen':{py:'pén',hz:'盆'},'pang':{py:'páng',hz:'旁'},'peng':{py:'péng',hz:'朋'},
+    'pian':{py:'piān',hz:'偏'},'piao':{py:'piāo',hz:'飘'},'pie':{py:'piě',hz:'瞥'},
+    'pin':{py:'pín',hz:'贫'},'ping':{py:'píng',hz:'平'},
+    'ma':{py:'mā',hz:'妈'},'mo':{py:'mò',hz:'墨'},'me':{py:'me',hz:'么'},'mi':{py:'mǐ',hz:'米'},'mu':{py:'mù',hz:'木'},
+    'mai':{py:'mǎi',hz:'买'},'mei':{py:'měi',hz:'美'},'mao':{py:'māo',hz:'猫'},'mou':{py:'móu',hz:'谋'},
+    'man':{py:'mān',hz:'馒'},'men':{py:'mén',hz:'门'},'mang':{py:'máng',hz:'忙'},'meng':{py:'méng',hz:'蒙'},
+    'mian':{py:'miān',hz:'棉'},'miao':{py:'miāo',hz:'苗'},'mie':{py:'miè',hz:'灭'},
+    'min':{py:'mín',hz:'民'},'ming':{py:'míng',hz:'名'},
+    'fa':{py:'fā',hz:'发'},'fo':{py:'fó',hz:'佛'},'fu':{py:'fù',hz:'父'},
+    'fei':{py:'fēi',hz:'飞'},'fou':{py:'fǒu',hz:'否'},
+    'fan':{py:'fān',hz:'翻'},'fen':{py:'fēn',hz:'分'},'fang':{py:'fāng',hz:'方'},'feng':{py:'fēng',hz:'风'},
+    'da':{py:'dà',hz:'大'},'de':{py:'dé',hz:'得'},'di':{py:'dì',hz:'地'},'du':{py:'dú',hz:'读'},
+    'dai':{py:'dài',hz:'带'},'dei':{py:'dei',hz:'得'},'dao':{py:'dào',hz:'道'},'dou':{py:'dōu',hz:'都'},
+    'dan':{py:'dān',hz:'单'},'den':{py:'dēn',hz:'扽'},'dang':{py:'dāng',hz:'当'},'deng':{py:'děng',hz:'等'},
+    'dia':{py:'diā',hz:'嗲'},'diao':{py:'diào',hz:'钓'},'die':{py:'dié',hz:'碟'},'diu':{py:'diū',hz:'丢'},
+    'dian':{py:'diān',hz:'点'},'ding':{py:'dīng',hz:'丁'},
+    'dua':{py:'duā',hz:'剁'},'duo':{py:'duō',hz:'多'},'dui':{py:'duì',hz:'对'},'duan':{py:'duān',hz:'端'},'dun':{py:'dùn',hz:'顿'},'dong':{py:'dōng',hz:'东'},
+    'ta':{py:'tā',hz:'他'},'te':{py:'tè',hz:'特'},'ti':{py:'tí',hz:'题'},'tu':{py:'tù',hz:'兔'},
+    'tai':{py:'tāi',hz:'胎'},'tao':{py:'táo',hz:'桃'},'tou':{py:'tóu',hz:'头'},
+    'tan':{py:'tán',hz:'谈'},'tang':{py:'táng',hz:'糖'},'teng':{py:'téng',hz:'疼'},
+    'tiao':{py:'tiào',hz:'跳'},'tie':{py:'tiě',hz:'铁'},
+    'tian':{py:'tiān',hz:'天'},'ting':{py:'tīng',hz:'听'},
+    'tuo':{py:'tuō',hz:'脱'},'tui':{py:'tuī',hz:'推'},'tuan':{py:'tuān',hz:'团'},'tun':{py:'tún',hz:'屯'},'tong':{py:'tōng',hz:'通'},
+    'na':{py:'nà',hz:'那'},'ne':{py:'ne',hz:'呢'},'ni':{py:'nǐ',hz:'你'},'nu':{py:'nú',hz:'奴'},'nü':{py:'nǚ',hz:'女'},
+    'nai':{py:'nǎi',hz:'奶'},'nei':{py:'nèi',hz:'内'},'nao':{py:'nào',hz:'闹'},'nou':{py:'nóu',hz:'耨'},
+    'nan':{py:'nán',hz:'南'},'nen':{py:'nèn',hz:'嫩'},'nang':{py:'náng',hz:'馕'},'neng':{py:'néng',hz:'能'},
+    'nian':{py:'nián',hz:'年'},'niao':{py:'niǎo',hz:'鸟'},'nie':{py:'niē',hz:'捏'},'niu':{py:'niú',hz:'牛'},
+    'nin':{py:'nín',hz:'您'},'ning':{py:'níng',hz:'宁'},'niang':{py:'niáng',hz:'娘'},
+    'nuo':{py:'nuò',hz:'诺'},'nuan':{py:'nuǎn',hz:'暖'},'nong':{py:'nóng',hz:'农'},
+    'la':{py:'lā',hz:'拉'},'le':{py:'le',hz:'了'},'li':{py:'lǐ',hz:'里'},'lu':{py:'lù',hz:'路'},'lü':{py:'lǚ',hz:'旅'},
+    'lai':{py:'lái',hz:'来'},'lei':{py:'lèi',hz:'累'},'lao':{py:'lǎo',hz:'老'},'lou':{py:'lóu',hz:'楼'},
+    'lan':{py:'lán',hz:'蓝'},'lang':{py:'láng',hz:'狼'},'leng':{py:'léng',hz:'冷'},
+    'lian':{py:'lián',hz:'联'},'liao':{py:'liào',hz:'料'},'lie':{py:'liě',hz:'列'},'liu':{py:'liú',hz:'留'},
+    'lin':{py:'lín',hz:'林'},'ling':{py:'líng',hz:'零'},'liang':{py:'liàng',hz:'量'},
+    'luo':{py:'luò',hz:'落'},'luan':{py:'luán',hz:'乱'},'lun':{py:'lùn',hz:'论'},'long':{py:'lóng',hz:'龙'},
+    'ga':{py:'gā',hz:'嘎'},'ge':{py:'gè',hz:'个'},'gu':{py:'gù',hz:'故'},
+    'gai':{py:'gāi',hz:'该'},'gei':{py:'gěi',hz:'给'},'gao':{py:'gāo',hz:'高'},'gou':{py:'gǒu',hz:'狗'},
+    'gan':{py:'gān',hz:'干'},'gen':{py:'gēn',hz:'跟'},'gang':{py:'gāng',hz:'刚'},'geng':{py:'gèng',hz:'更'},
+    'gua':{py:'guā',hz:'瓜'},'guo':{py:'guó',hz:'国'},'gui':{py:'guì',hz:'贵'},'guan':{py:'guān',hz:'关'},'gun':{py:'gǔn',hz:'滚'},'guang':{py:'guāng',hz:'光'},'gong':{py:'gōng',hz:'公'},
+    'ka':{py:'kā',hz:'咖'},'ke':{py:'kě',hz:'可'},'ku':{py:'kù',hz:'酷'},
+    'kai':{py:'kāi',hz:'开'},'kao':{py:'kǎo',hz:'考'},'kou':{py:'kǒu',hz:'口'},
+    'kan':{py:'kàn',hz:'看'},'ken':{py:'kěn',hz:'肯'},'kang':{py:'káng',hz:'扛'},'keng':{py:'kēng',hz:'坑'},
+    'kua':{py:'kuā',hz:'夸'},'kuo':{py:'kuò',hz:'括'},'kui':{py:'kuī',hz:'亏'},'kuan':{py:'kuān',hz:'宽'},'kun':{py:'kùn',hz:'困'},'kuang':{py:'kuāng',hz:'框'},'kong':{py:'kōng',hz:'空'},
+    'ha':{py:'hā',hz:'哈'},'he':{py:'hé',hz:'和'},'hu':{py:'hú',hz:'湖'},
+    'hai':{py:'hái',hz:'还'},'hei':{py:'hēi',hz:'黑'},'hao':{py:'hǎo',hz:'好'},'hou':{py:'hòu',hz:'后'},
+    'han':{py:'hán',hz:'寒'},'hen':{py:'hěn',hz:'很'},'hang':{py:'háng',hz:'行'},'heng':{py:'héng',hz:'横'},
+    'hua':{py:'huā',hz:'花'},'huo':{py:'huò',hz:'货'},'hui':{py:'huì',hz:'会'},'huan':{py:'huán',hz:'还'},'hun':{py:'hún',hz:'魂'},'huang':{py:'huáng',hz:'黄'},'hong':{py:'hóng',hz:'红'},
+    'ji':{py:'jī',hz:'机'},'ju':{py:'jǔ',hz:'举'},
+    'jia':{py:'jiā',hz:'家'},'jiao':{py:'jiào',hz:'叫'},'jie':{py:'jiě',hz:'姐'},'jiu':{py:'jiǔ',hz:'九'},
+    'jian':{py:'jiān',hz:'间'},'jin':{py:'jīn',hz:'金'},'jing':{py:'jīng',hz:'京'},'jiang':{py:'jiāng',hz:'江'},
+    'juan':{py:'juān',hz:'卷'},'jun':{py:'jūn',hz:'军'},'jiong':{py:'jiōng',hz:'囧'},
+    'qi':{py:'qī',hz:'七'},'qu':{py:'qù',hz:'去'},
+    'qia':{py:'qiā',hz:'掐'},'qiao':{py:'qiào',hz:'桥'},'qie':{py:'qiě',hz:'且'},'qiu':{py:'qiū',hz:'秋'},
+    'qian':{py:'qián',hz:'钱'},'qin':{py:'qín',hz:'琴'},'qing':{py:'qīng',hz:'青'},'qiang':{py:'qiāng',hz:'枪'},
+    'quan':{py:'quān',hz:'圈'},'qun':{py:'qún',hz:'群'},'qiong':{py:'qióng',hz:'穷'},
+    'xi':{py:'xī',hz:'西'},'xu':{py:'xū',hz:'虚'},
+    'xia':{py:'xià',hz:'下'},'xiao':{py:'xiǎo',hz:'小'},'xie':{py:'xiè',hz:'谢'},'xiu':{py:'xiū',hz:'休'},
+    'xian':{py:'xiān',hz:'先'},'xin':{py:'xīn',hz:'心'},'xing':{py:'xíng',hz:'行'},'xiang':{py:'xiāng',hz:'香'},
+    'xuan':{py:'xuān',hz:'宣'},'xun':{py:'xùn',hz:'训'},'xiong':{py:'xióng',hz:'熊'},
+    'zha':{py:'zhā',hz:'扎'},'zhe':{py:'zhè',hz:'这'},'zhi':{py:'zhī',hz:'知'},'zhu':{py:'zhù',hz:'住'},
+    'zhai':{py:'zhāi',hz:'摘'},'zhei':{py:'zhèi',hz:'这'},'zhao':{py:'zhào',hz:'照'},'zhou':{py:'zhōu',hz:'周'},
+    'zhan':{py:'zhān',hz:'沾'},'zhen':{py:'zhēn',hz:'真'},'zhang':{py:'zhāng',hz:'张'},'zheng':{py:'zhèng',hz:'正'},
+    'zhua':{py:'zhuā',hz:'抓'},'zhuo':{py:'zhuō',hz:'桌'},'zhui':{py:'zhuī',hz:'追'},'zhuan':{py:'zhuān',hz:'专'},'zhun':{py:'zhǔn',hz:'准'},'zhuang':{py:'zhuāng',hz:'装'},'zhong':{py:'zhōng',hz:'中'},
+    'cha':{py:'chā',hz:'插'},'che':{py:'chē',hz:'车'},'chi':{py:'chī',hz:'吃'},'chu':{py:'chū',hz:'出'},
+    'chai':{py:'chāi',hz:'拆'},'chao':{py:'chāo',hz:'吵'},'chou':{py:'chōu',hz:'抽'},
+    'chan':{py:'chán',hz:'产'},'chen':{py:'chén',hz:'沉'},'chang':{py:'cháng',hz:'长'},'cheng':{py:'chéng',hz:'成'},
+    'chuo':{py:'chuō',hz:'戳'},'chui':{py:'chuī',hz:'吹'},'chuan':{py:'chuān',hz:'穿'},'chun':{py:'chūn',hz:'春'},'chuang':{py:'chuāng',hz:'窗'},'chong':{py:'chóng',hz:'虫'},
+    'sha':{py:'shā',hz:'沙'},'she':{py:'shé',hz:'蛇'},'shi':{py:'shì',hz:'是'},'shu':{py:'shū',hz:'书'},
+    'shai':{py:'shāi',hz:'筛'},'shei':{py:'shéi',hz:'谁'},'shao':{py:'shào',hz:'少'},'shou':{py:'shǒu',hz:'手'},
+    'shan':{py:'shān',hz:'山'},'shen':{py:'shēn',hz:'身'},'shang':{py:'shàng',hz:'上'},'sheng':{py:'shēng',hz:'生'},
+    'shuo':{py:'shuō',hz:'说'},'shui':{py:'shuǐ',hz:'水'},'shuan':{py:'shuān',hz:'拴'},'shun':{py:'shùn',hz:'顺'},'shuang':{py:'shuāng',hz:'双'},
+    'ra':{py:'rá',hz:'仨'},'re':{py:'rè',hz:'热'},'ri':{py:'rì',hz:'日'},'ru':{py:'rú',hz:'如'},
+    'rao':{py:'rào',hz:'绕'},'rou':{py:'ròu',hz:'肉'},
+    'ran':{py:'rán',hz:'然'},'ren':{py:'rén',hz:'人'},'rang':{py:'ráng',hz:'嚷'},'reng':{py:'réng',hz:'仍'},
+    'ruo':{py:'ruò',hz:'若'},'rui':{py:'ruì',hz:'锐'},'ruan':{py:'ruǎn',hz:'软'},'run':{py:'rùn',hz:'润'},'rong':{py:'róng',hz:'容'},
+    'za':{py:'zā',hz:'扎'},'ze':{py:'zé',hz:'则'},'zi':{py:'zì',hz:'字'},'zu':{py:'zú',hz:'足'},
+    'zai':{py:'zāi',hz:'灾'},'zei':{py:'zéi',hz:'贼'},'zao':{py:'zào',hz:'造'},'zou':{py:'zǒu',hz:'走'},
+    'zan':{py:'zán',hz:'咱'},'zen':{py:'zěn',hz:'怎'},'zang':{py:'zāng',hz:'脏'},'zeng':{py:'zēng',hz:'增'},
+    'zuo':{py:'zuò',hz:'做'},'zui':{py:'zuǐ',hz:'嘴'},'zuan':{py:'zuān',hz:'钻'},'zun':{py:'zūn',hz:'尊'},'zong':{py:'zōng',hz:'总'},
+    'ca':{py:'cā',hz:'擦'},'ce':{py:'cè',hz:'测'},'ci':{py:'cì',hz:'次'},'cu':{py:'cú',hz:'粗'},
+    'cai':{py:'cāi',hz:'猜'},'cao':{py:'cǎo',hz:'草'},'cou':{py:'còu',hz:'凑'},
+    'can':{py:'cān',hz:'餐'},'cen':{py:'cēn',hz:'岑'},'cang':{py:'cāng',hz:'仓'},'ceng':{py:'céng',hz:'曾'},
+    'cuo':{py:'cuò',hz:'错'},'cui':{py:'cuī',hz:'催'},'cuan':{py:'cuān',hz:'蹿'},'cun':{py:'cún',hz:'存'},'cong':{py:'cóng',hz:'从'},
+    'sa':{py:'sā',hz:'撒'},'se':{py:'sè',hz:'色'},'si':{py:'sì',hz:'四'},'su':{py:'sù',hz:'素'},
+    'sai':{py:'sāi',hz:'塞'},'sao':{py:'sǎo',hz:'扫'},'sou':{py:'sōu',hz:'搜'},
+    'san':{py:'sān',hz:'三'},'sen':{py:'sēn',hz:'森'},'sang':{py:'sāng',hz:'桑'},'seng':{py:'sēng',hz:'僧'},
+    'suo':{py:'suō',hz:'缩'},'sui':{py:'suì',hz:'岁'},'suan':{py:'suān',hz:'酸'},'sun':{py:'sūn',hz:'孙'},'song':{py:'sōng',hz:'松'},
+    'ya':{py:'yā',hz:'呀'},'ye':{py:'yē',hz:'耶'},'yi':{py:'yī',hz:'一'},'yu':{py:'yú',hz:'鱼'},
+    'yai':{py:'yāi',hz:'崖'},'yao':{py:'yāo',hz:'腰'},'you':{py:'yóu',hz:'游'},
+    'yan':{py:'yán',hz:'言'},'yin':{py:'yín',hz:'银'},'yang':{py:'yáng',hz:'羊'},'ying':{py:'yīng',hz:'英'},'yong':{py:'yōng',hz:'用'},
+    'yia':{py:'yia',hz:'也'},'yiao':{py:'yiāo',hz:'腰'},'yie':{py:'yie',hz:'也'},'yiu':{py:'yiu',hz:'由'},
+    'yian':{py:'yian',hz:'演'},'yuan':{py:'yuān',hz:'冤'},'yun':{py:'yún',hz:'云'},'yue':{py:'yuè',hz:'月'},'yiong':{py:'yiong',hz:'用'},
+    'wa':{py:'wā',hz:'挖'},'wo':{py:'wǒ',hz:'我'},'wu':{py:'wú',hz:'无'},
+    'wai':{py:'wāi',hz:'歪'},'wei':{py:'wèi',hz:'为'},
+    'wan':{py:'wān',hz:'弯'},'wen':{py:'wén',hz:'文'},'wang':{py:'wāng',hz:'汪'},'weng':{py:'wēng',hz:'翁'},
+  };
+
+  // 표시할 성모와 운모 (교과서 순서)
+  const displayInitials = ['b','p','m','f','d','t','n','l','g','k','h','j','q','x','zh','ch','sh','r','z','c','s'];
+  const displayFinals = [
+    {f:'a',label:'a'},   {f:'o',label:'o'},   {f:'e',label:'e'},
+    {f:'ai',label:'ai'}, {f:'ei',label:'ei'}, {f:'ao',label:'ao'}, {f:'ou',label:'ou'},
+    {f:'an',label:'an'}, {f:'en',label:'en'}, {f:'ang',label:'ang'},{f:'eng',label:'eng'},
+    {f:'i',label:'i'},   {f:'ia',label:'ia'},  {f:'ie',label:'ie'},  {f:'iao',label:'iao'},
+    {f:'iu',label:'iu'}, {f:'ian',label:'ian'},{f:'in',label:'in'}, {f:'ing',label:'ing'},
+    {f:'u',label:'u'},   {f:'ua',label:'ua'},  {f:'uo',label:'uo'},  {f:'ui',label:'ui'},
+    {f:'uan',label:'uan'},{f:'un',label:'un'},
+  ];
+
+  const {wrap:w, scroll} = makeTableCard(
+    '🇨🇳 중국어 병음 전체 표 (声母×韵母)',
+    '탭하면 발음이 나와요! 빈 칸은 존재하지 않는 조합이에요.'
+  );
+  const table = document.createElement('table');
+  table.style.cssText = 'border-collapse:collapse;font-size:10px;';
+
+  // 헤더행
+  const thead = document.createElement('thead');
+  const headerRow = document.createElement('tr');
+  const cornerCell = makeCell('성모↓<br>운모→','header');
+  cornerCell.style.cssText += 'font-size:9px;min-width:28px;';
+  headerRow.appendChild(cornerCell);
+  displayFinals.forEach(f=>{
+    const th = makeCell('<b>'+f.label+'</b>','header');
+    th.style.cssText += 'font-size:10px;min-width:40px;';
+    headerRow.appendChild(th);
+  });
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  // 데이터행
+  const tbody = document.createElement('tbody');
+  displayInitials.forEach(ini=>{
+    const tr = document.createElement('tr');
+    const th = makeCell('<b>'+ini+'</b>','rowheader');
+    tr.appendChild(th);
+    displayFinals.forEach(f=>{
+      const key = ini+f.f;
+      const data = validPinyin[key];
+      if(data){
+        const td = makeCell(
+          '<div style="font-size:10px;color:var(--purple);font-weight:700;">'+data.py+'</div>'
+          +'<div style="font-size:11px;color:var(--text);font-weight:800;">'+data.hz+'</div>',
+          'cell',
+          ()=>speakChar(data.hz,'zh-CN'),
+          data.py+' = '+data.hz
+        );
+        td.style.minWidth='42px';
+        tr.appendChild(td);
+      } else {
+        const td = makeCell('','empty');
+        td.style.minWidth='42px';
+        tr.appendChild(td);
+      }
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  scroll.appendChild(table);
+  wrap.appendChild(w);
+}
+
+// ════════════════════════════════════════
+//  🇯🇵 일본어 전체 발음표 (50음도 통합)
+// ════════════════════════════════════════
+function buildJpnFullTable(wrap){
+  // 히라가나 + 가타카나 통합 50음도
+  const rows=[
+    {label:'あ행',hira:['あ','い','う','え','お'],kata:['ア','イ','ウ','エ','オ'],reads:['a','i','u','e','o']},
+    {label:'か행',hira:['か','き','く','け','こ'],kata:['カ','キ','ク','ケ','コ'],reads:['ka','ki','ku','ke','ko']},
+    {label:'さ行',hira:['さ','し','す','せ','そ'],kata:['サ','シ','ス','セ','ソ'],reads:['sa','shi','su','se','so']},
+    {label:'た行',hira:['た','ち','つ','て','と'],kata:['タ','チ','ツ','テ','ト'],reads:['ta','chi','tsu','te','to']},
+    {label:'な行',hira:['な','に','ぬ','ね','の'],kata:['ナ','ニ','ヌ','ネ','ノ'],reads:['na','ni','nu','ne','no']},
+    {label:'は行',hira:['は','ひ','ふ','へ','ほ'],kata:['ハ','ヒ','フ','ヘ','ホ'],reads:['ha','hi','fu','he','ho']},
+    {label:'ま行',hira:['ま','み','む','め','も'],kata:['マ','ミ','ム','メ','モ'],reads:['ma','mi','mu','me','mo']},
+    {label:'や行',hira:['や','','ゆ','','よ'],kata:['ヤ','','ユ','','ヨ'],reads:['ya','','yu','','yo']},
+    {label:'ら行',hira:['ら','り','る','れ','ろ'],kata:['ラ','リ','ル','レ','ロ'],reads:['ra','ri','ru','re','ro']},
+    {label:'わ行',hira:['わ','','を','','ん'],kata:['ワ','','ヲ','','ン'],reads:['wa','','wo','','n']},
+  ];
+  const colHeaders=['아(a)','이(i)','우(u)','에(e)','오(o)'];
+
+  const {wrap:w, scroll} = makeTableCard(
+    '🇯🇵 일본어 50음도 — 히라가나 + 가타카나',
+    '탭하면 발음! 위=히라가나, 아래=가타카나'
+  );
+  const table = document.createElement('table');
+  table.style.cssText = 'border-collapse:collapse;font-size:11px;';
+
+  // 헤더
+  const thead = document.createElement('thead');
+  const hr = document.createElement('tr');
+  hr.appendChild(makeCell('','rowheader'));
+  colHeaders.forEach(h=>hr.appendChild(makeCell(h,'header')));
+  thead.appendChild(hr);
+  table.appendChild(thead);
+
+  // 데이터
+  const tbody = document.createElement('tbody');
+  rows.forEach(row=>{
+    const tr = document.createElement('tr');
+    tr.appendChild(makeCell('<b>'+row.label+'</b>','rowheader'));
+    for(let i=0;i<5;i++){
+      const hira=row.hira[i], kata=row.kata[i], read=row.reads[i];
+      if(hira && hira.trim()){
+        const td = makeCell(
+          '<div style="font-size:16px;font-weight:800;color:var(--purple);">'+hira+'</div>'
+          +'<div style="font-size:14px;font-weight:800;color:var(--pink);">'+kata+'</div>'
+          +'<div style="font-size:9px;color:var(--muted);">'+read+'</div>',
+          'cell',
+          ()=>speakChar(hira,'ja-JP'),
+          hira+' · '+kata+' : '+read
+        );
+        td.style.minWidth='50px';
+        tr.appendChild(td);
+      } else {
+        const td=makeCell('','empty'); td.style.minWidth='50px';
+        tr.appendChild(td);
+      }
+    }
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  scroll.appendChild(table);
+  wrap.appendChild(w);
+
+  // 탁음·반탁음 표
+  const {wrap:w2, scroll:scroll2} = makeTableCard('탁음(゛) & 반탁음(゜)','탭하면 발음!');
+  const dakuRows=[
+    {label:'が行',chars:['が','ぎ','ぐ','げ','ご'],reads:['ga','gi','gu','ge','go']},
+    {label:'ざ行',chars:['ざ','じ','ず','ぜ','ぞ'],reads:['za','ji','zu','ze','zo']},
+    {label:'だ行',chars:['だ','ぢ','づ','で','ど'],reads:['da','ji','zu','de','do']},
+    {label:'ば行',chars:['ば','び','ぶ','べ','ぼ'],reads:['ba','bi','bu','be','bo']},
+    {label:'ぱ行(반탁)',chars:['ぱ','ぴ','ぷ','ぺ','ぽ'],reads:['pa','pi','pu','pe','po']},
+  ];
+  const t2=document.createElement('table'); t2.style.cssText='border-collapse:collapse;font-size:11px;';
+  const th2=document.createElement('thead');
+  const hr2=document.createElement('tr');
+  hr2.appendChild(makeCell('','rowheader'));
+  colHeaders.forEach(h=>hr2.appendChild(makeCell(h,'header')));
+  th2.appendChild(hr2); t2.appendChild(th2);
+  const tb2=document.createElement('tbody');
+  dakuRows.forEach(row=>{
+    const tr=document.createElement('tr');
+    tr.appendChild(makeCell('<b>'+row.label+'</b>','rowheader'));
+    row.chars.forEach((ch,i)=>{
+      const td=makeCell(
+        '<div style="font-size:16px;font-weight:800;color:#EC4899;">'+ch+'</div>'
+        +'<div style="font-size:9px;color:var(--muted);">'+row.reads[i]+'</div>',
+        'cell',()=>speakChar(ch,'ja-JP'),ch+' : '+row.reads[i]
+      );
+      td.style.minWidth='50px';
+      tr.appendChild(td);
+    });
+    tb2.appendChild(tr);
+  });
+  t2.appendChild(tb2);
+  scroll2.appendChild(t2);
+  wrap.appendChild(w2);
+}
+
+// ════════════════════════════════════════
+//  🇪🇸 스페인어 전체 발음표
+// ════════════════════════════════════════
+function buildSpaFullTable(wrap){
+  // 스페인어 알파벳 × 모음 조합
+  const {wrap:w, scroll} = makeTableCard(
+    '🇪🇸 스페인어 발음 조합표',
+    '탭하면 발음! 같은 글자도 뒤에 오는 모음에 따라 달라져요.'
+  );
+
+  const rows = [
+    {init:'B/V', note:'b와 v는 같은 소리!',
+     cells:[{combo:'ba',kr:'바'},{combo:'be',kr:'베'},{combo:'bi',kr:'비'},{combo:'bo',kr:'보'},{combo:'bu',kr:'부'}]},
+    {init:'C', note:'e/i앞=s, 나머지=k',
+     cells:[{combo:'ca',kr:'카'},{combo:'ce',kr:'세',special:true},{combo:'ci',kr:'시',special:true},{combo:'co',kr:'코'},{combo:'cu',kr:'쿠'},{combo:'que',kr:'케',note:'QU+e'},{combo:'qui',kr:'키',note:'QU+i'}]},
+    {init:'G', note:'e/i앞=ㅎ, 나머지=g',
+     cells:[{combo:'ga',kr:'가'},{combo:'ge',kr:'헤',special:true},{combo:'gi',kr:'히',special:true},{combo:'go',kr:'고'},{combo:'gu',kr:'구'},{combo:'gue',kr:'게',note:'GU+e'},{combo:'gui',kr:'기',note:'GU+i'}]},
+    {init:'H', note:'항상 묵음!',
+     cells:[{combo:'ha',kr:'아(H묵음)',special:true},{combo:'he',kr:'에(H묵음)',special:true},{combo:'hi',kr:'이(H묵음)',special:true},{combo:'ho',kr:'오(H묵음)',special:true},{combo:'hu',kr:'우(H묵음)',special:true}]},
+    {init:'J', note:'항상 ㅎ 소리',
+     cells:[{combo:'ja',kr:'하',special:true},{combo:'je',kr:'헤',special:true},{combo:'ji',kr:'히',special:true},{combo:'jo',kr:'호',special:true},{combo:'ju',kr:'후',special:true}]},
+    {init:'LL', note:'야/여/요 소리',
+     cells:[{combo:'lla',kr:'야',special:true},{combo:'lle',kr:'예'},{combo:'llo',kr:'요'},{combo:'llu',kr:'유'}]},
+    {init:'Ñ', note:'냐/뇨 소리',
+     cells:[{combo:'ña',kr:'냐',special:true},{combo:'ñe',kr:'녜'},{combo:'ño',kr:'뇨'},{combo:'ñu',kr:'뉴'}]},
+    {init:'R (약)', note:'단어 중간: 부드럽게',
+     cells:[{combo:'ra',kr:'라'},{combo:'re',kr:'레'},{combo:'ri',kr:'리'},{combo:'ro',kr:'로'},{combo:'ru',kr:'루'}]},
+    {init:'RR (강)', note:'혀 떨기!',
+     cells:[{combo:'rra',kr:'라(강)',special:true},{combo:'rre',kr:'레(강)',special:true},{combo:'rri',kr:'리(강)'},{combo:'rro',kr:'로(강)',special:true},{combo:'rru',kr:'루(강)'}]},
+    {init:'Z', note:'s 소리 (스페인)',
+     cells:[{combo:'za',kr:'사',special:true},{combo:'ze',kr:'세'},{combo:'zo',kr:'소'},{combo:'zu',kr:'수'}]},
+  ];
+
+  const table=document.createElement('table');
+  table.style.cssText='border-collapse:collapse;font-size:10px;';
+  const thead=document.createElement('thead');
+  const hr=document.createElement('tr');
+  [makeCell('자음','rowheader'),makeCell('규칙','header'),makeCell('조합 (탭→발음)','header')].forEach(td=>hr.appendChild(td));
+  hr.children[2].colSpan=8;
+  thead.appendChild(hr); table.appendChild(thead);
+
+  const tbody=document.createElement('tbody');
+  rows.forEach(row=>{
+    const tr=document.createElement('tr');
+    const initTd=makeCell('<b>'+row.init+'</b>','rowheader');
+    const noteTd=makeCell('<span style="font-size:9px;color:var(--muted);">'+row.note+'</span>','header');
+    noteTd.style.minWidth='70px';
+    tr.appendChild(initTd); tr.appendChild(noteTd);
+    row.cells.forEach(cell=>{
+      const color = cell.special ? 'var(--pink)' : 'var(--purple)';
+      const bg = cell.special ? '#FFF5F9' : '#FAF5FF';
+      const td=makeCell(
+        '<div style="font-size:12px;font-weight:800;color:'+color+';background:'+bg+';border-radius:5px;padding:2px 4px;">'+cell.combo+'</div>'
+        +'<div style="font-size:9px;color:var(--muted);">'+cell.kr+'</div>'
+        +(cell.note?'<div style="font-size:8px;color:var(--pink);">'+cell.note+'</div>':''),
+        'cell',()=>speakChar(cell.combo,'es-ES'),
+        cell.combo+' : '+cell.kr
+      );
+      td.style.minWidth='45px';
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  scroll.appendChild(table);
+  wrap.appendChild(w);
+}
+
+// ════════════════════════════════════════
+//  🇹🇭 태국어 전체 발음표 (자음 × 모음 조합)
+// ════════════════════════════════════════
+function buildThaFullTable(wrap){
+  const {wrap:w, scroll} = makeTableCard(
+    '🇹🇭 태국어 자음 × 모음 조합표',
+    '탭하면 발음! 자음+모음이 합쳐져 음절이 돼요.'
+  );
+
+  // 주요 자음 × 주요 모음 조합
+  const consonants=[
+    {c:'ก',p:'k',class:'중'},
+    {c:'ข',p:'kh',class:'고'},
+    {c:'ค',p:'kh',class:'저'},
+    {c:'ง',p:'ng',class:'저'},
+    {c:'จ',p:'j',class:'중'},
+    {c:'ช',p:'ch',class:'저'},
+    {c:'ซ',p:'s',class:'저'},
+    {c:'ด',p:'d',class:'중'},
+    {c:'ต',p:'t',class:'중'},
+    {c:'ท',p:'th',class:'저'},
+    {c:'น',p:'n',class:'저'},
+    {c:'บ',p:'b',class:'중'},
+    {c:'ป',p:'p',class:'중'},
+    {c:'พ',p:'ph',class:'저'},
+    {c:'ม',p:'m',class:'저'},
+    {c:'ย',p:'y',class:'저'},
+    {c:'ร',p:'r',class:'저'},
+    {c:'ล',p:'l',class:'저'},
+    {c:'ว',p:'w',class:'저'},
+    {c:'ส',p:'s',class:'고'},
+    {c:'ห',p:'h',class:'고'},
+    {c:'อ',p:'-',class:'중'},
+  ];
+
+  // 주요 모음 (자음 뒤에 붙는 형태)
+  const vowels=[
+    {v:'า',label:'า\n(아장)',read:'아~',pos:'right'},
+    {v:'ิ',label:'ิ\n(이단)',read:'이',pos:'top'},
+    {v:'ี',label:'ี\n(이장)',read:'이~',pos:'top'},
+    {v:'ุ',label:'ุ\n(우단)',read:'우',pos:'bottom'},
+    {v:'ู',label:'ู\n(우장)',read:'우~',pos:'bottom'},
+    {v:'เ',label:'เ\n(에장)',read:'에~',pos:'left'},
+    {v:'แ',label:'แ\n(애장)',read:'애~',pos:'left'},
+    {v:'โ',label:'โ\n(오장)',read:'오~',pos:'left'},
+    {v:'ใ',label:'ใ\n(아이)',read:'아이',pos:'left'},
+    {v:'ไ',label:'ไ\n(아이)',read:'아이',pos:'left'},
+  ];
+
+  // 자음+모음 조합 생성 함수
+  function combine(cons, vow){
+    if(vow.pos==='right') return cons.c + vow.v;
+    if(vow.pos==='top' || vow.pos==='bottom') return cons.c + vow.v;
+    if(vow.pos==='left') return vow.v + cons.c;
+    return cons.c + vow.v;
+  }
+
+  const table=document.createElement('table');
+  table.style.cssText='border-collapse:collapse;font-size:10px;';
+
+  // 헤더
+  const thead=document.createElement('thead');
+  const hr=document.createElement('tr');
+  const ch=makeCell('자음\n(등급)','header');
+  ch.style.cssText+='min-width:50px;font-size:9px;';
+  hr.appendChild(ch);
+  vowels.forEach(v=>{
+    const th=makeCell(
+      '<div style="font-size:13px;color:var(--purple);font-weight:800;">'+v.v+'</div>'
+      +'<div style="font-size:8px;color:var(--muted);">'+v.read+'</div>',
+      'header'
+    );
+    th.style.minWidth='38px';
+    hr.appendChild(th);
+  });
+  thead.appendChild(hr); table.appendChild(thead);
+
+  // 데이터
+  const tbody=document.createElement('tbody');
+  consonants.forEach(cons=>{
+    const tr=document.createElement('tr');
+    const classColors={'중':'var(--purple)','고':'var(--pink)','저':'#10B981'};
+    const th=makeCell(
+      '<div style="font-size:16px;font-weight:800;color:'+classColors[cons.class]+';">'+cons.c+'</div>'
+      +'<div style="font-size:9px;color:var(--muted);">'+cons.p+'</div>'
+      +'<div style="font-size:8px;background:'+classColors[cons.class]+'22;color:'+classColors[cons.class]+';border-radius:3px;padding:0 3px;">'+cons.class+'자음</div>',
+      'rowheader'
+    );
+    th.style.minWidth='50px';
+    tr.appendChild(th);
+    vowels.forEach(vow=>{
+      const combo=combine(cons,vow);
+      const td=makeCell(
+        '<div style="font-size:16px;font-weight:800;color:var(--purple);">'+combo+'</div>'
+        +'<div style="font-size:8px;color:var(--muted);">'+cons.p+vow.read+'</div>',
+        'cell',()=>speakChar(combo,'th-TH'),
+        combo+' : '+cons.p+'+'+vow.read
+      );
+      td.style.minWidth='38px';
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  scroll.appendChild(table);
+  wrap.appendChild(w);
+}
+
+// ════════════════════════════════════════
+//  🇮🇹 이탈리아어 발음 조합표
+// ════════════════════════════════════════
+function buildItaFullTable(wrap){
+  const {wrap:w, scroll} = makeTableCard(
+    '🇮🇹 이탈리아어 발음 조합표',
+    '탭하면 발음! C·G가 뒤 모음에 따라 달라지는 게 핵심!'
+  );
+
+  const vowels=['a','e','i','o','u'];
+  const rows=[
+    {init:'b',  note:'b',       sounds:{a:'ba',e:'be',i:'bi',o:'bo',u:'bu'}},
+    {init:'c',  note:'k/ch',    sounds:{a:'ca(카)',e:'ce(체)',i:'ci(치)',o:'co(코)',u:'cu(쿠)'},special:['e','i']},
+    {init:'ch', note:'k (e/i앞)',sounds:{e:'che(케)',i:'chi(키)'},special:['e','i']},
+    {init:'d',  note:'d',       sounds:{a:'da',e:'de',i:'di',o:'do',u:'du'}},
+    {init:'f',  note:'f',       sounds:{a:'fa',e:'fe',i:'fi',o:'fo',u:'fu'}},
+    {init:'g',  note:'g/j',     sounds:{a:'ga(가)',e:'ge(제)',i:'gi(지)',o:'go(고)',u:'gu(구)'},special:['e','i']},
+    {init:'gh', note:'g (e/i앞)',sounds:{e:'ghe(게)',i:'ghi(기)'},special:['e','i']},
+    {init:'gl', note:'리 소리',  sounds:{i:'gli(리)'},special:['i']},
+    {init:'gn', note:'냐/뇨',    sounds:{a:'gna(냐)',e:'gne(녜)',i:'gni(뇨)',o:'gno(뇨)',u:'gnu(뉴)'}},
+    {init:'h',  note:'묵음',    sounds:{a:'ha(아)',e:'he(에)',i:'hi(이)',o:'ho(오)',u:'hu(우)'},special:['a','e','i','o','u']},
+    {init:'l',  note:'l',       sounds:{a:'la',e:'le',i:'li',o:'lo',u:'lu'}},
+    {init:'m',  note:'m',       sounds:{a:'ma',e:'me',i:'mi',o:'mo',u:'mu'}},
+    {init:'n',  note:'n',       sounds:{a:'na',e:'ne',i:'ni',o:'no',u:'nu'}},
+    {init:'p',  note:'p',       sounds:{a:'pa',e:'pe',i:'pi',o:'po',u:'pu'}},
+    {init:'r',  note:'r',       sounds:{a:'ra',e:'re',i:'ri',o:'ro',u:'ru'}},
+    {init:'s',  note:'s/z',     sounds:{a:'sa',e:'se',i:'si',o:'so',u:'su'}},
+    {init:'sc', note:'sk/sh',   sounds:{a:'sca(스카)',e:'sce(쉐)',i:'sci(쉬)',o:'sco(스코)',u:'scu(스쿠)'},special:['e','i']},
+    {init:'t',  note:'t',       sounds:{a:'ta',e:'te',i:'ti',o:'to',u:'tu'}},
+    {init:'v',  note:'v',       sounds:{a:'va',e:'ve',i:'vi',o:'vo',u:'vu'}},
+    {init:'z',  note:'ts/dz',   sounds:{a:'za',e:'ze',i:'zi',o:'zo',u:'zu'}},
+  ];
+
+  const table=document.createElement('table');
+  table.style.cssText='border-collapse:collapse;font-size:10px;';
+  const thead=document.createElement('thead');
+  const hr=document.createElement('tr');
+  [makeCell('자음','rowheader'), makeCell('읽기','header'),
+   ...vowels.map(v=>makeCell('<b>+'+v+'</b>','header'))].forEach(td=>hr.appendChild(td));
+  thead.appendChild(hr); table.appendChild(thead);
+
+  const tbody=document.createElement('tbody');
+  rows.forEach(row=>{
+    const tr=document.createElement('tr');
+    tr.appendChild(makeCell('<b>'+row.init+'</b>','rowheader'));
+    tr.appendChild(makeCell('<span style="font-size:9px;color:var(--muted);">'+row.note+'</span>','header'));
+    vowels.forEach(v=>{
+      const sound=row.sounds[v];
+      if(sound){
+        const isSpecial=row.special&&row.special.includes(v);
+        const color=isSpecial?'var(--pink)':'var(--purple)';
+        const bg=isSpecial?'#FFF5F9':'#FAF5FF';
+        const word=sound.split('(')[0];
+        const label=sound.includes('(')?sound:'';
+        const td=makeCell(
+          '<div style="font-size:12px;font-weight:800;color:'+color+';background:'+bg+';border-radius:4px;padding:1px 3px;">'+word+'</div>'
+          +(isSpecial?'<div style="font-size:8px;color:'+color+';">⭐'+sound.replace(word,'').replace(/[()]/g,'')+'</div>':''),
+          'cell',()=>speakChar(word,'it-IT'),word
+        );
+        td.style.minWidth='45px';
+        tr.appendChild(td);
+      } else {
+        const td=makeCell('','empty'); td.style.minWidth='45px';
+        tr.appendChild(td);
+      }
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  scroll.appendChild(table);
+  wrap.appendChild(w);
 }
 
 // ── 일본어: 히라가나 ──
